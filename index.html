@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiger Tracks - Team Check-Ins</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root {
+  --accent:#229FA1; --accent-light:#e0f7f7; --primary:#1a1a2e;
+  --text:#1a1a2e; --text-light:#6b7280; --border:#e5e7eb;
+  --bg:#f9fafb; --panel:#fff; --success:#10b981; --warning:#f59e0b;
+  --danger:#ef4444; --info:#3b82f6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Montserrat',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* NAV */
+nav { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); padding:0 2rem; display:flex; align-items:center; gap:1.5rem; position:sticky; top:0; z-index:100; flex-wrap:wrap; }
+nav .logo { display:flex; align-items:center; gap:.5rem; padding:.75rem 0; margin-right:1rem; }
+nav .logo img { height:28px; }
+nav .logo span { color:var(--accent); font-weight:800; font-size:.9rem; }
+.nav-link { color:#94a3b8; font-size:.82rem; font-weight:600; padding:.85rem .5rem; cursor:pointer; border-bottom:3px solid transparent; transition:all .15s; white-space:nowrap; }
+.nav-link:hover,.nav-link.active { color:#fff; border-bottom-color:var(--accent); }
+.nav-user { margin-left:auto; font-size:.72rem; color:#94a3b8; display:flex; align-items:center; gap:.5rem; }
+.nav-user a { color:var(--accent); cursor:pointer; font-size:.7rem; }
+
+/* LAYOUT */
+.container { max-width:960px; margin:0 auto; padding:1.5rem; }
+.section { display:none; }
+.section.active { display:block; }
+.card { background:var(--panel); border-radius:12px; border:1px solid var(--border); padding:1.25rem; margin-bottom:1rem; }
+.card h2 { font-size:1.05rem; color:var(--accent); margin-bottom:.75rem; }
+.card h3 { font-size:.92rem; margin-bottom:.5rem; }
+h2.page-title { font-size:1.25rem; margin-bottom:1rem; }
+
+/* FORM ELEMENTS */
+select, input[type="text"], input[type="email"], input[type="date"] {
+  padding:.5rem; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:.85rem; width:100%;
+}
+textarea { width:100%; padding:.6rem; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:.85rem; resize:vertical; min-height:60px; }
+textarea:focus, select:focus, input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(34,159,161,.12); }
+label { font-size:.82rem; font-weight:600; display:block; margin-bottom:.3rem; }
+.hint { font-size:.75rem; color:var(--text-light); margin-bottom:.4rem; font-style:italic; }
+
+/* BUTTONS */
+.btn { display:inline-block; padding:.55rem 1.2rem; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:700; font-size:.85rem; cursor:pointer; font-family:inherit; }
+.btn:hover { opacity:.9; }
+.btn-sm { padding:.35rem .75rem; font-size:.78rem; }
+.btn-outline { background:transparent; border:2px solid var(--accent); color:var(--accent); }
+
+/* TEMPLATE BOX */
+.template-box { border:1px solid var(--border); border-radius:8px; padding:1rem; margin:.75rem 0; background:#fafafa; }
+.template-box .label { font-size:.7rem; font-weight:700; text-transform:uppercase; color:var(--accent); letter-spacing:1px; margin-bottom:.5rem; }
+
+/* CALLOUT */
+.callout { padding:.75rem 1rem; border-radius:8px; font-size:.85rem; border-left:4px solid var(--accent); background:var(--accent-light); margin:.5rem 0; }
+.callout.green { border-color:var(--success); background:#ecfdf5; }
+
+/* RADIO */
+.rv-radio { display:inline-flex; align-items:center; gap:.35rem; font-size:.85rem; cursor:pointer; margin-right:.75rem; }
+
+/* TAB BAR */
+.tab-bar { display:flex; gap:.25rem; border-bottom:2px solid var(--border); margin-bottom:1rem; }
+.tab { padding:.5rem 1rem; font-size:.82rem; font-weight:600; cursor:pointer; border-bottom:3px solid transparent; color:var(--text-light); }
+.tab:hover { color:var(--text); }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th, td { padding:.4rem .6rem; border-bottom:1px solid var(--border); text-align:left; font-size:.82rem; }
+th { background:var(--bg); font-weight:700; }
+
+/* LOGIN GATE */
+#loginGate { position:fixed; inset:0; background:linear-gradient(135deg,#1a1a2e,#16213e); display:flex; align-items:center; justify-content:center; z-index:9999; }
+#loginGate .box { background:#fff; padding:2.5rem; border-radius:16px; text-align:center; max-width:400px; width:90%; }
+#loginGate img { height:50px; margin-bottom:1rem; }
+
+/* SUCCESS */
+.success-banner { padding:.75rem 1rem; background:#dcfce7; color:#059669; border-radius:8px; font-weight:600; text-align:center; display:none; }
+
+/* TOAST */
+.toast { position:fixed; bottom:2rem; right:2rem; background:var(--primary); color:#fff; padding:.75rem 1.25rem; border-radius:8px; font-size:.85rem; z-index:9999; display:none; }
+
+/* HOME CARDS */
+.home-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem; margin:1rem 0; }
+.home-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.25rem; cursor:pointer; transition:all .15s; }
+.home-card:hover { border-color:var(--accent); box-shadow:0 4px 12px rgba(34,159,161,.15); transform:translateY(-2px); }
+.home-card .hc-icon { font-size:1.8rem; margin-bottom:.5rem; }
+.home-card h3 { font-size:.95rem; color:var(--accent); margin-bottom:.35rem; }
+.home-card p { font-size:.8rem; color:var(--text-light); line-height:1.5; }
+
+/* BADGE */
+.badge { display:inline-block; padding:.15rem .5rem; border-radius:4px; font-size:.7rem; font-weight:700; }
+.badge-teal { background:var(--accent-light); color:var(--accent); }
+.badge-green { background:#dcfce7; color:#059669; }
+.badge-orange { background:#fef3c7; color:#92400e; }
+
+@media(max-width:700px){
+  nav { padding:0 1rem; }
+  .container { padding:1rem; }
+  .home-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- GOOGLE SIGN-IN GATE -->
+<div id="loginGate">
+  <div class="box">
+    <img src="/logo.png" alt="Tiger Tracks">
+    <h2 style="font-size:1.1rem;margin-bottom:.25rem;">🔒 Tiger Tracks Check-Ins</h2>
+    <p style="font-size:.82rem;color:var(--text-light);margin-bottom:1.25rem;">Sign in with your Tiger Tracks Google account</p>
+    <div id="g_id_onload"
+      data-client_id="1010698547754-h3pfeegsn3tkemksjjtjlcgccoqtqbt6.apps.googleusercontent.com"
+      data-callback="handleGoogleSignIn"
+      data-auto_prompt="false">
+    </div>
+    <div class="g_id_signin"
+      data-type="standard"
+      data-shape="rectangular"
+      data-theme="outline"
+      data-text="sign_in_with"
+      data-size="large"
+      data-logo_alignment="left"
+      data-width="360">
+    </div>
+    <div id="loginError" style="display:none;margin-top:.6rem;color:#dc2626;font-size:.82rem;font-weight:600;"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav id="mainNav" style="display:none;">
+  <div class="logo"><img src="/logo.png" alt="TT"><span>Check-Ins</span></div>
+  <span class="nav-link active" onclick="go('home')">🏠 Home</span>
+  <span class="nav-link" onclick="go('weekly')">📅 Weekly Sync</span>
+  <span class="nav-link" onclick="go('monthly')">📊 Monthly Feedback</span>
+  <span class="nav-link" onclick="go('links')">🔗 Active Meeting Links</span>
+  <span class="nav-link" onclick="go('peer')">💬 Give Feedback</span>
+  <span class="nav-link" onclick="go('submissions')">📬 Submissions</span>
+  <div class="nav-user"><span id="navUserEmail"></span><a onclick="signOut()">Sign out</a></div>
+</nav>
+
+<div class="container" id="mainContent" style="display:none;">
+
+<!-- ============ HOME ============ -->
+<div class="section active" id="sec-home">
+  <h2 class="page-title">🏠 Welcome to Tiger Tracks Check-Ins</h2>
+
+  <div class="card">
+    <h2 style="font-size:1rem;">How This Works</h2>
+    <p style="font-size:.85rem;color:var(--text-light);line-height:1.7;margin-bottom:.75rem;">
+      This tool manages all weekly syncs, monthly feedback reviews, and peer feedback for the Tiger Tracks team.
+      You are signed in with your Google account, which controls what you can see and edit.
+    </p>
+    <div style="font-size:.85rem;line-height:1.8;">
+      <strong>Your access:</strong>
+      <ul style="padding-left:1.25rem;margin:.5rem 0;">
+        <li><strong>Employees</strong> can only fill out their own sections on their assigned weekly and monthly forms.</li>
+        <li><strong>Managers</strong> can fill out the supervisor/manager sections on their direct reports' forms.</li>
+        <li>No one can edit another team member's sections.</li>
+        <li>Manager notes are hidden from employees until the meeting is complete and notes are released.</li>
+        <li>All updates auto-save as you type.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="home-grid">
+    <div class="home-card" onclick="go('weekly')">
+      <div class="hc-icon">📅</div>
+      <h3>Weekly Manager Sync</h3>
+      <p>Fill out your wins, priorities, risks, and capacity before your 1:1 with your manager. Your manager adds coaching notes after the meeting.</p>
+    </div>
+    <div class="home-card" onclick="go('monthly')">
+      <div class="hc-icon">📊</div>
+      <h3>Monthly Feedback Review</h3>
+      <p>Role-specific monthly reflection and performance feedback. Employee fills out reflections, manager fills out assessment. Templates match your role.</p>
+    </div>
+    <div class="home-card" onclick="go('links')">
+      <div class="hc-icon">🔗</div>
+      <h3>Active Meeting Links</h3>
+      <p>View and share unique form links for every team member. Use these to send weekly and monthly check-in reminders.</p>
+    </div>
+    <div class="home-card" onclick="go('peer')">
+      <div class="hc-icon">💬</div>
+      <h3>Give Feedback</h3>
+      <p>Send feedback to any team member, directly or anonymously. Route it to the individual or their manager.</p>
+    </div>
+    <div class="home-card" onclick="go('submissions')">
+      <div class="hc-icon">📬</div>
+      <h3>Submissions</h3>
+      <p>View submitted weekly syncs, monthly reviews, and peer feedback. Visibility is role-based.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:.5rem;">
+    <h2 style="font-size:.95rem;">📋 Quick Reference</h2>
+    <div style="font-size:.82rem;line-height:1.7;">
+      <p><strong>Weekly Sync:</strong> Due before your scheduled 1:1 each week. Come prepared with wins, priorities, and risks.</p>
+      <p><strong>Monthly Feedback:</strong> Completed at the end of each month. Employee reflections first, then manager assessment.</p>
+      <p><strong>Peer Feedback:</strong> Available anytime. Can be anonymous or named. Routed to the individual, their manager, or both.</p>
+      <p style="margin-top:.5rem;color:var(--accent);"><strong>Need help?</strong> Contact elizabeth@tigertracks.ai</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WEEKLY SYNC ============ -->
+<div class="section" id="sec-weekly">
+  <h2 class="page-title">📅 Weekly Manager Sync</h2>
+
+  <div class="card">
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div style="flex:1;min-width:180px;">
+        <label>Employee</label>
+        <select id="wkName" onchange="onWkNameChange()"><option value="">-- Select --</option></select>
+      </div>
+      <div style="flex:1;min-width:150px;">
+        <label>Role</label>
+        <select id="wkRole" onchange="renderWeeklyRoleSection()"><option value="">-- Select --</option>
+          <option>Account Coordinator</option><option>Account Strategist</option>
+          <option>Account Manager</option><option>Senior Account Manager</option>
+          <option>Associate Director</option><option>Director</option><option>Senior Director</option>
+          <option>Partnerships Director</option><option>Head of Partnerships</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:150px;">
+        <label>Manager</label>
+        <input type="text" id="wkManager" placeholder="Auto-filled" readonly>
+      </div>
+      <div style="min-width:150px;">
+        <label>Week of</label>
+        <input type="date" id="wkDate">
+      </div>
+    </div>
+    <div id="wkAccessMsg" style="display:none;padding:.5rem;background:#fef3c7;border-radius:6px;font-size:.78rem;color:#92400e;"></div>
+  </div>
+
+  <!-- Employee Section -->
+  <div class="card" id="wkEmployeeSection">
+    <div class="template-box">
+      <div class="label">Employee Section</div>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🏆 Wins & Progress This Week</h4>
+      <textarea id="w_wins" rows="3" placeholder="List 1-2 wins or progress highlights..."></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🎯 Top Priority This Week</h4>
+      <textarea id="w_priority" rows="2" placeholder="What is your #1 focus?"></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">⚠️ Risks, Blockers, or Deadlines at Risk</h4>
+      <textarea id="w_risks" rows="2" placeholder="Include churn risks if applicable..."></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">👥 Direct Reports Check-In <span style="font-weight:400;color:var(--text-light);">(if applicable)</span></h4>
+      <textarea id="w_reports" rows="2" placeholder="Accounts / Bandwidth / Feedback / People Management..."></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">📊 Capacity</h4>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin:.5rem 0;">
+        <label class="rv-radio"><input type="radio" name="w_capacity" value="under"> 🔵 Under</label>
+        <label class="rv-radio"><input type="radio" name="w_capacity" value="at"> 🟢 At</label>
+        <label class="rv-radio"><input type="radio" name="w_capacity" value="over"> 🔴 Over</label>
+      </div>
+      <textarea id="w_capacity_note" rows="1" placeholder="If over: what needs to shift?"></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🙋 Support / Feedback Needed From Manager</h4>
+      <textarea id="w_support" rows="2" placeholder="If nothing is blocked, say so clearly."></textarea>
+    </div>
+  </div>
+
+  <!-- Role-specific section (partnerships) -->
+  <div id="wkRoleSection"></div>
+
+  <!-- Manager Section -->
+  <div class="card" id="wkManagerSection">
+    <div class="template-box" style="background:#fff8f0;border-color:var(--accent);">
+      <div class="label" style="color:var(--primary);">Supervisor Section</div>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">📝 Manager Notes</h4>
+      <textarea id="w_mgr_notes" rows="3" placeholder="Observations, coaching notes, priorities alignment..."></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🎯 Confirmed Priorities for Next Week</h4>
+      <textarea id="w_mgr_priorities" rows="2" placeholder="Top 1-2 priorities confirmed..."></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">💬 Coaching Moment <span style="font-weight:400;color:var(--text-light);">(Observation → Impact → Next Step)</span></h4>
+      <textarea id="w_mgr_coaching" rows="3" placeholder="Use the 3-Step Feedback Model..."></textarea>
+
+      <h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">📌 Action Items</h4>
+      <textarea id="w_mgr_actions" rows="2" placeholder="Document actions in one sentence each..."></textarea>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+    <button class="btn" onclick="saveCheckin('weekly')">💾 Save</button>
+    <button class="btn btn-outline" onclick="exportCheckin('weekly')">📥 Copy to Clipboard</button>
+    <span style="font-size:.75rem;color:var(--text-light);align-self:center;" id="wkAutoSave">Auto-saves as you type</span>
+  </div>
+  <div id="wkSaved" class="success-banner" style="margin-top:.75rem;">✅ Saved!</div>
+</div>
+
+<!-- ============ MONTHLY FEEDBACK ============ -->
+<div class="section" id="sec-monthly">
+  <h2 class="page-title">📊 Monthly Feedback Review</h2>
+
+  <div class="card">
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div style="flex:1;min-width:180px;">
+        <label>Employee</label>
+        <select id="moName" onchange="onMoNameChange()"><option value="">-- Select --</option></select>
+      </div>
+      <div style="flex:1;min-width:150px;">
+        <label>Role</label>
+        <select id="moRole" onchange="renderMonthlyTemplate()"><option value="">-- Select --</option>
+          <option>Account Coordinator</option><option>Account Strategist</option>
+          <option>Account Manager</option><option>Senior Account Manager</option>
+          <option>Associate Director</option><option>Director</option><option>Senior Director</option>
+          <option>Partnerships Director</option><option>Head of Partnerships</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:150px;">
+        <label>Manager</label>
+        <input type="text" id="moManager" placeholder="Auto-filled" readonly>
+      </div>
+      <div style="min-width:150px;">
+        <label>Month</label>
+        <select id="moMonth">
+          <option>March 2026</option><option>April 2026</option><option>May 2026</option>
+          <option>June 2026</option><option>July 2026</option>
+        </select>
+      </div>
+    </div>
+    <div id="moAccessMsg" style="display:none;padding:.5rem;background:#fef3c7;border-radius:6px;font-size:.78rem;color:#92400e;"></div>
+  </div>
+
+  <div id="monthlyTemplateArea"></div>
+
+  <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.5rem;">
+    <button class="btn" onclick="saveCheckin('monthly')">💾 Save</button>
+    <button class="btn btn-outline" onclick="exportCheckin('monthly')">📥 Copy to Clipboard</button>
+    <span style="font-size:.75rem;color:var(--text-light);align-self:center;" id="moAutoSave">Auto-saves as you type</span>
+  </div>
+  <div id="moSaved" class="success-banner" style="margin-top:.75rem;">✅ Saved!</div>
+</div>
+
+<!-- ============ ACTIVE MEETING LINKS ============ -->
+<div class="section" id="sec-links">
+  <h2 class="page-title">🔗 Active Meeting Links</h2>
+
+  <div class="tab-bar" style="margin-bottom:1rem;">
+    <div class="tab active" onclick="switchLinkTab('monthly',this)" id="linkTabMo">📊 Monthly Feedback</div>
+    <div class="tab" onclick="switchLinkTab('weekly',this)" id="linkTabWk">📅 Weekly Check-In</div>
+  </div>
+
+  <!-- Monthly Links -->
+  <div id="linkPanelMonthly">
+    <div class="card">
+      <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1rem;">Each team member gets a unique link. Updates made here or on the individual form are synced automatically.</p>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <select id="linkMonth" onchange="renderLinks()" style="max-width:200px;">
+          <option>March 2026</option><option>April 2026</option><option>May 2026</option>
+        </select>
+        <button class="btn btn-sm" onclick="copyAllLinks('monthly')">📋 Copy All Links</button>
+        <button class="btn btn-sm" style="background:var(--info);" onclick="sendReminders('monthly')">📧 Email All Reminders</button>
+        <span id="linkCopyOk" style="font-size:.78rem;color:var(--success);display:none;">Copied!</span>
+        <span id="moEmailOk" style="font-size:.78rem;color:var(--success);display:none;"></span>
+      </div>
+      <div id="linkTable"></div>
+    </div>
+  </div>
+
+  <!-- Weekly Links -->
+  <div id="linkPanelWeekly" style="display:none;">
+    <div class="card">
+      <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1rem;">Weekly check-in links. Send before your 1:1 so they come prepared. Updates sync between this dashboard and the individual forms.</p>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <label style="margin:0;">Week of:</label>
+        <input type="date" id="linkWeekDate" onchange="renderWeeklyLinks()" style="max-width:200px;">
+        <button class="btn btn-sm" onclick="copyAllLinks('weekly')">📋 Copy All Links</button>
+        <button class="btn btn-sm" style="background:var(--info);" onclick="sendReminders('weekly')">📧 Email All Reminders</button>
+        <span id="wkLinkCopyOk" style="font-size:.78rem;color:var(--success);display:none;">Copied!</span>
+        <span id="wkEmailOk" style="font-size:.78rem;color:var(--success);display:none;"></span>
+      </div>
+      <div id="wkLinkTable"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PEER FEEDBACK ============ -->
+<div class="section" id="sec-peer">
+  <h2 class="page-title">💬 Give Feedback</h2>
+
+  <div class="card">
+    <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1rem;">Send feedback to any team member. You can choose to be anonymous or include your name, and decide whether feedback goes directly to the person, their manager, or both.</p>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <div style="flex:1;min-width:200px;">
+        <label>Who is this feedback for?</label>
+        <select id="peerRecipient">
+          <option value="">-- Select team member --</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <label>Deliver to:</label>
+        <select id="peerDelivery">
+          <option value="individual">📩 Directly to the individual</option>
+          <option value="manager">👤 Their manager only</option>
+          <option value="both">📩👤 Both individual and manager</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label>Identity</label>
+      <div style="display:flex;gap:1rem;margin:.35rem 0;">
+        <label class="rv-radio"><input type="radio" name="peerAnon" value="anonymous" checked> 🕶️ Anonymous</label>
+        <label class="rv-radio"><input type="radio" name="peerAnon" value="named"> 👤 Include my name</label>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label>Feedback Type</label>
+      <select id="peerType" style="max-width:300px;">
+        <option value="praise">🌟 Praise / Recognition</option>
+        <option value="constructive">🔧 Constructive Feedback</option>
+        <option value="suggestion">💡 Suggestion</option>
+        <option value="concern">⚠️ Concern</option>
+      </select>
+    </div>
+
+    <label>Your Feedback</label>
+    <textarea id="peerMessage" rows="5" placeholder="Be specific and constructive. What did they do? What was the impact? What could be different?"></textarea>
+
+    <div style="margin-top:1rem;">
+      <button class="btn" onclick="submitPeerFeedback()">📨 Submit Feedback</button>
+    </div>
+  </div>
+
+  <div id="peerSuccess" class="success-banner" style="margin-top:.75rem;">✅ Feedback submitted successfully!</div>
+</div>
+
+<!-- ============ SUBMISSIONS ============ -->
+<div class="section" id="sec-submissions">
+  <h2 class="page-title">📬 Submitted Feedback</h2>
+  <div class="card" style="margin-bottom:.75rem;">
+    <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+      <label style="margin:0;">Filter:</label>
+      <select id="subFilter" onchange="loadSubmissions()" style="max-width:200px;">
+        <option value="all">All Types</option>
+        <option value="weekly">Weekly Only</option>
+        <option value="monthly">Monthly Only</option>
+        <option value="peer">Peer Feedback Only</option>
+      </select>
+      <label style="margin:0;">Employee:</label>
+      <select id="subEmployee" onchange="loadSubmissions()" style="max-width:200px;">
+        <option value="">All</option>
+      </select>
+    </div>
+  </div>
+  <div class="card" id="subList">
+    <p style="color:var(--text-light);font-size:.85rem;">Loading...</p>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== GOOGLE AUTH =====
+var currentUser = null; // {email, name}
+
+var EMAIL_MAP={"Riley Abercrombie":"riley@tigertracks.ai","Hannah Price":"hannah@tigertracks.ai","Charlotte Pohl":"charlotte@tigertracks.ai","Allison Long":"allison@tigertracks.ai","Rachel Scharett":"rachael@tigertracks.ai","Shelby Nations":"shelby@tigertracks.ai","Owen Phipps":"owen@tigertracks.ai","Megan Brenneke":"meganb@tigertracks.ai","Seth McDaniel":"seth@tigertracks.ai","Mary McCambridge":"mary@tigertracks.ai","Will Sokol":"will@tigertracks.ai","Gretchen Hess":"gretchen@tigertracks.ai","Megan Klein":"megank@tigertracks.ai","Daren Kalkoffen":"daren@tigertracks.ai","Evin Leclerc":"evin@tigertracks.ai","Kiyana Saidi-Nejad":"kiyana@tigertracks.ai","Bruno Milalaf":"bruno@tigertracks.ai","Billy Bevevino":"billy@tigertracks.ai","Tate Dewey":"tate@tigertracks.ai","Sanad Shuman":"sanad@tigertracks.ai","Alex Blumberg":"alex@tigertracks.ai","Steven Jatich":"steven@tigertracks.ai","Kersten Kruse":"kersten@tigertracks.ai","Anirudh Venkat":"anirudh@tigertracks.ai","Ashley Kaika":"ashley@tigertracks.ai"};
+var REVERSE_EMAIL={};
+Object.keys(EMAIL_MAP).forEach(function(n){REVERSE_EMAIL[EMAIL_MAP[n].toLowerCase()]=n;});
+
+// Global admins: see everything
+var GLOBAL_ADMINS=["cliff@tigertracks.ai","henry@tigertracks.ai","elizabeth@tigertracks.ai"];
+
+function handleGoogleSignIn(response){
+  var errEl=document.getElementById('loginError');
+  errEl.style.display='none';
+  try {
+    var payload=JSON.parse(atob(response.credential.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    var email=(payload.email||'').toLowerCase();
+    if(!email||(!email.endsWith('@tigertracks.ai')&&GLOBAL_ADMINS.indexOf(email)<0)){
+      errEl.textContent='Please sign in with your @tigertracks.ai Google account.';
+      errEl.style.display='block';return;
+    }
+    currentUser={email:email,name:payload.name||email.split('@')[0]};
+    localStorage.setItem('tt_google_email',email);
+    localStorage.setItem('tt_google_name',currentUser.name);
+    localStorage.setItem('tt_google_exp',String(Date.now()+30*24*60*60*1000));
+    enterApp();
+  } catch(e){
+    errEl.textContent='Sign-in error. Please try again.';errEl.style.display='block';
+  }
+}
+
+function enterApp(){
+  document.getElementById('loginGate').style.display='none';
+  document.getElementById('mainNav').style.display='';
+  document.getElementById('mainContent').style.display='';
+  document.getElementById('navUserEmail').textContent=currentUser.email;
+  applyAccessControl();
+}
+
+function signOut(){
+  localStorage.removeItem('tt_google_email');
+  localStorage.removeItem('tt_google_name');
+  localStorage.removeItem('tt_google_exp');
+  currentUser=null;
+  location.reload();
+}
+
+// Auto-login check
+(function(){
+  var email=localStorage.getItem('tt_google_email');
+  var exp=parseInt(localStorage.getItem('tt_google_exp')||'0');
+  if(email&&exp>Date.now()){
+    currentUser={email:email,name:localStorage.getItem('tt_google_name')||email.split('@')[0]};
+    enterApp();
+  }
+})();
+
+// ===== ORG CHART =====
+var orgChart = {
+  "Riley Abercrombie":{manager:"Rachel Scharett",role:"Associate Director",reports:["Shelby Nations","Owen Phipps"],practice:"am"},
+  "Hannah Price":{manager:"Rachel Scharett",role:"Associate Director",reports:["Mary McCambridge","Will Sokol"],practice:"am"},
+  "Charlotte Pohl":{manager:"Rachel Scharett",role:"Associate Director",reports:["Kiyana Saidi-Nejad","Bruno Milalaf","Billy Bevevino","Sanad Shuman"],practice:"am"},
+  "Allison Long":{manager:"Rachel Scharett",role:"Senior Account Manager",practice:"am"},
+  "Rachel Scharett":{manager:"",role:"Senior Director",reports:["Riley Abercrombie","Hannah Price","Charlotte Pohl","Allison Long"],practice:"am"},
+  "Shelby Nations":{manager:"Riley Abercrombie",role:"Senior Account Manager",reports:["Megan Brenneke","Seth McDaniel"],practice:"am"},
+  "Owen Phipps":{manager:"Riley Abercrombie",role:"Account Strategist",practice:"am"},
+  "Megan Brenneke":{manager:"Shelby Nations",role:"Account Coordinator",practice:"am"},
+  "Seth McDaniel":{manager:"Shelby Nations",role:"Account Strategist",practice:"am"},
+  "Mary McCambridge":{manager:"Hannah Price",role:"Senior Account Manager",reports:["Gretchen Hess"],practice:"am"},
+  "Will Sokol":{manager:"Hannah Price",role:"Senior Account Manager",reports:["Megan Klein"],practice:"am"},
+  "Gretchen Hess":{manager:"Mary McCambridge",role:"Account Manager",reports:["Daren Kalkoffen","Evin Leclerc"],practice:"am"},
+  "Megan Klein":{manager:"Will Sokol",role:"Account Manager",practice:"am"},
+  "Daren Kalkoffen":{manager:"Gretchen Hess",role:"Account Strategist",practice:"am"},
+  "Evin Leclerc":{manager:"Gretchen Hess",role:"Account Coordinator",practice:"am"},
+  "Kiyana Saidi-Nejad":{manager:"Charlotte Pohl",role:"Account Manager",reports:["Tate Dewey"],practice:"am"},
+  "Bruno Milalaf":{manager:"Charlotte Pohl",role:"Account Manager",practice:"am"},
+  "Billy Bevevino":{manager:"Charlotte Pohl",role:"Account Manager",practice:"am"},
+  "Tate Dewey":{manager:"Kiyana Saidi-Nejad",role:"Account Strategist",practice:"am"},
+  "Sanad Shuman":{manager:"Charlotte Pohl",role:"Account Coordinator",practice:"am"},
+  "Alex Blumberg":{manager:"Ashley Kaika",role:"Head of Partnerships",practice:"part"},
+  "Steven Jatich":{manager:"Ashley Kaika",role:"Partnerships Director",practice:"part"},
+  "Kersten Kruse":{manager:"Ashley Kaika",role:"Director of Marketing",reports:["Anirudh Venkat"],practice:"mkt"},
+  "Anirudh Venkat":{manager:"Kersten Kruse",role:"Head of Analytics",practice:"mkt"},
+  "Ashley Kaika":{manager:"",role:"VP of Partnerships",reports:["Alex Blumberg","Steven Jatich","Kersten Kruse"],practice:"part"}
+};
+
+var roleMap={"Senior Director":"Senior Director","Associate Director":"Associate Director","Senior Account Manager":"Senior Account Manager","Account Manager":"Account Manager","Account Strategist":"Account Strategist","Account Coordinator":"Account Coordinator","Director of Partnerships":"Partnerships Director","Partnerships Director":"Partnerships Director","Head of Partnerships":"Head of Partnerships","Director of Marketing":"Director","VP of Partnerships":"Senior Director","Head of Analytics":"Account Strategist"};
+
+// Get all people underneath someone in the org tree
+function getSubordinates(name){
+  var result=[];
+  var person=orgChart[name];
+  if(!person||!person.reports)return result;
+  person.reports.forEach(function(r){
+    result.push(r);
+    result=result.concat(getSubordinates(r));
+  });
+  return result;
+}
+
+// Can this user see submissions for a given employee?
+function canViewEmployee(viewerEmail,employeeName){
+  var ve=viewerEmail.toLowerCase();
+  // Global admins see everything
+  if(GLOBAL_ADMINS.indexOf(ve)>=0) return true;
+  // Rachael sees all AM
+  if(ve==='rachael@tigertracks.ai'){
+    var emp=orgChart[employeeName];
+    return emp&&emp.practice==='am';
+  }
+  // Check if viewer is the employee themselves
+  var viewerName=REVERSE_EMAIL[ve];
+  if(viewerName===employeeName) return true;
+  // Check if viewer is the employee's manager
+  var empData=orgChart[employeeName];
+  if(empData&&empData.manager===viewerName) return true;
+  // ADs (and anyone with reports) can see their full pod underneath them
+  if(viewerName){
+    var subs=getSubordinates(viewerName);
+    if(subs.indexOf(employeeName)>=0) return true;
+  }
+  return false;
+}
+
+// Can this user EDIT the employee section for a given employee?
+function canEditEmployeeSection(viewerEmail,employeeName){
+  var ve=viewerEmail.toLowerCase();
+  var viewerName=REVERSE_EMAIL[ve];
+  // Only the employee themselves can edit their section
+  return viewerName===employeeName;
+}
+
+// Can this user EDIT the manager section for a given employee?
+function canEditManagerSection(viewerEmail,employeeName){
+  var ve=viewerEmail.toLowerCase();
+  // Global admins can edit manager section
+  if(GLOBAL_ADMINS.indexOf(ve)>=0) return true;
+  var viewerName=REVERSE_EMAIL[ve];
+  if(!viewerName) return false;
+  // Direct manager
+  var empData=orgChart[employeeName];
+  if(empData&&empData.manager===viewerName) return true;
+  return false;
+}
+
+// Access control: lock/unlock sections based on current user
+function applyAccessControl(){
+  // This runs when user selects an employee in weekly/monthly
+}
+
+function enforceWeeklyAccess(){
+  var emp=document.getElementById('wkName').value;
+  if(!emp||!currentUser){return;}
+  var msgEl=document.getElementById('wkAccessMsg');
+  var empSection=document.getElementById('wkEmployeeSection');
+  var mgrSection=document.getElementById('wkManagerSection');
+
+  var canEditEmp=canEditEmployeeSection(currentUser.email,emp);
+  var canEditMgr=canEditManagerSection(currentUser.email,emp);
+  var canView=canViewEmployee(currentUser.email,emp);
+
+  if(!canView){
+    msgEl.textContent='You do not have access to view this employee\'s check-in.';
+    msgEl.style.display='block';
+    empSection.style.display='none';
+    mgrSection.style.display='none';
+    return;
+  }
+
+  msgEl.style.display='none';
+  empSection.style.display='';
+  mgrSection.style.display='';
+
+  // Lock employee section if not the employee
+  empSection.querySelectorAll('textarea,input,select').forEach(function(el){
+    el.disabled=!canEditEmp;
+    el.style.opacity=canEditEmp?'1':'.6';
+  });
+  // Lock manager section if not the manager
+  mgrSection.querySelectorAll('textarea,input,select').forEach(function(el){
+    el.disabled=!canEditMgr;
+    el.style.opacity=canEditMgr?'1':'.6';
+  });
+}
+
+function enforceMonthlyAccess(){
+  var emp=document.getElementById('moName').value;
+  if(!emp||!currentUser){return;}
+  var msgEl=document.getElementById('moAccessMsg');
+  var canView=canViewEmployee(currentUser.email,emp);
+
+  if(!canView){
+    msgEl.textContent='You do not have access to view this employee\'s feedback.';
+    msgEl.style.display='block';
+    document.getElementById('monthlyTemplateArea').innerHTML='';
+    return;
+  }
+  msgEl.style.display='none';
+}
+
+// Populate dropdowns
+(function(){
+  var names=Object.keys(orgChart).sort();
+  ['wkName','moName','peerRecipient','subEmployee'].forEach(function(id){
+    var sel=document.getElementById(id);
+    if(!sel)return;
+    names.forEach(function(n){
+      var p=orgChart[n];
+      sel.innerHTML+='<option value="'+n+'">'+n+(p.role?' ('+p.role+')':'')+'</option>';
+    });
+  });
+  document.getElementById('wkDate').valueAsDate=new Date();
+})();
+
+function onWkNameChange(){
+  var n=document.getElementById('wkName').value;
+  var p=orgChart[n];if(!p)return;
+  document.getElementById('wkManager').value=p.manager||'';
+  var mapped=roleMap[p.role]||p.role;
+  var sel=document.getElementById('wkRole');
+  for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===mapped){sel.selectedIndex=i;break;}}
+  renderWeeklyRoleSection();
+  enforceWeeklyAccess();
+  loadWeeklyData();
+}
+function onMoNameChange(){
+  var n=document.getElementById('moName').value;
+  var p=orgChart[n];if(!p)return;
+  document.getElementById('moManager').value=p.manager||'';
+  var mapped=roleMap[p.role]||p.role;
+  var sel=document.getElementById('moRole');
+  for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===mapped){sel.selectedIndex=i;break;}}
+  renderMonthlyTemplate();
+  enforceMonthlyAccess();
+}
+
+// ===== NAV =====
+function go(id){
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
+  var sec=document.getElementById('sec-'+id);if(sec)sec.classList.add('active');
+  event.target.classList.add('active');
+  if(id==='links')renderLinks();
+  if(id==='submissions')loadSubmissions();
+}
+
+// ===== WEEKLY ROLE-SPECIFIC =====
+var weeklyPartnershipsSections = {
+  "Partnerships Director": {
+    title: "Partnerships Director Weekly Check",
+    sections: [
+      {h:"1. Deal Ownership",items:["Did every active deal have an owner?","A next-step task?","Logged activity in last 7 days?","Any deal approaching the 7-day inactivity rule?","Any deal missing a next step?"]},
+      {h:"2. OKR Weekly Check",items:["Weekly outbound emails sent: x/150","Reply rate: 6-10%","Weekly brand discovery calls: x/5","Warm reactivation meetings: x/1","Go-forwards/audits presented: x/2","Total Value of Deals Owned MTD - Pipeline: $","Total Value of Deals Owned MTD - Closed: $"]},
+      {h:"3. Audit & Go-Forward Coordination",items:["Any enterprise audits scheduled this week?","SWAT channel created within 24 hours?","Intake sheet + discovery recording pinned?","Any gaps Ops had to fill?"]},
+      {h:"4. Availability, Risk, Escalation",items:["Any audits, kickoffs, or deals at risk?","Any unclear scopes needing tightening?","Any communication gaps with AM team?","Anything blocking outbound consistency?","Anything trending toward escalation?"]}
+    ]
+  },
+  "Head of Partnerships": {
+    title: "Head of Partnerships Weekly Check",
+    sections: [
+      {h:"1. Enterprise Deal Ownership",items:["Which enterprise deals moved forward this week?","Any deal approaching the 7-day inactivity rule?","Any enterprise deal missing a next step?"]},
+      {h:"2. OKR Weekly Check",items:["Outbound Emails Sent (x/180 week): 30 Agency + 150 T1-2 Brand","Tier 1-2 Brand Discovery (Cold): x/5 week","Partner-Intro'd Brand Meetings: x/1 week","Fund/Agency Partner Meetings: x/2 week","Go-forwards/audits presented: x/2 week","Total Value of Deals Owned MTD - Pipeline: $","Total Value of Deals Owned MTD - Closed: $"]},
+      {h:"3. Enterprise Audit Coordination >$30K",items:["Any enterprise audits scheduled this week?","SWAT channel created within 24 hours?","Intake sheet + discovery recording pinned?","Any gaps Ops had to fill?"]},
+      {h:"4. Leadership & Ownership Check",items:["How is the Partnerships Director doing against SOP?","What feedback did you deliver this week?","What was corrected immediately?","Any missed expectations or hygiene gaps from downline?"]},
+      {h:"5. Risks & Escalation",items:["Any enterprise deal at risk?","Any partner relationship needing attention?","Anywhere CEO is still being pulled in unnecessarily?","Any deliverability or outbound blockers?"]}
+    ]
+  }
+};
+
+function renderWeeklyRoleSection(){
+  var role=document.getElementById('wkRole').value;
+  var container=document.getElementById('wkRoleSection');
+  var tmpl=weeklyPartnershipsSections[role];
+  if(!tmpl){container.innerHTML='';return;}
+
+  var h='<div class="card"><div class="template-box" style="background:#f0fafa;border-color:var(--accent);"><div class="label">'+tmpl.title+'</div>';
+  tmpl.sections.forEach(function(sec){
+    h+='<h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">'+sec.h+'</h4>';
+    sec.items.forEach(function(item){
+      h+='<div style="display:flex;align-items:flex-start;gap:.5rem;margin-bottom:.4rem;">';
+      h+='<input type="checkbox" style="margin-top:.25rem;">';
+      h+='<span style="font-size:.83rem;">'+item+'</span>';
+      h+='</div>';
+    });
+    h+='<textarea rows="2" placeholder="Notes..." style="margin-top:.25rem;margin-bottom:.5rem;"></textarea>';
+  });
+  h+='</div></div>';
+  container.innerHTML=h;
+}
+
+// ===== MONTHLY TEMPLATES =====
+var monthlyTemplates = {
+"Account Coordinator":{
+  purpose:"Build execution reliability, confidence, and readiness for AS-level ownership.",
+  reflection:["What execution work are you most confident in right now?","Where did you learn a new platform, process, or best practice this month?","What skill would you like more exposure to next month?"],
+  supportExamples:["Clearer task context or success criteria","More examples/templates","Shadowing builds, QA, or reporting","Fewer priorities / clearer focus windows"],
+  working:["In-platform builds for Tier 3-4 clients","Change logs, UTMs, and documentation accuracy","Creative trafficking and asset handling","Responsiveness in Slack / inbox coverage","Reporting prep and slide quality"],
+  strengthen:["QA consistency across platforms and links","Asking clarifying questions earlier","Speed + accuracy balance","Understanding how tasks connect to performance"],
+  strengthenNote:"If you improve this one skill over the next 30 days, you will feel more confident and trusted in the pod.",
+  skillFocus:null
+},
+"Account Strategist":{
+  purpose:"Strengthen execution ownership, insights, and AM-readiness.",
+  reflection:["What channel or performance win are you most proud of this month?","Where did your analysis or insight directly influence an account decision?","What skill would most level up your impact next month?"],
+  supportExamples:["More clarity on account goals or KPIs","Better prioritization across accounts","Feedback on analysis or insights","Stronger partnership with AM or Sr AM"],
+  working:["Daily pacing, spend, and performance monitoring","Quality of optimizations and testing plans","Change logs and platform hygiene","Proactive insights (not just reactive answers)","QA of AC builds and tracking"],
+  strengthen:["Translating metrics into clear recommendations","Flagging risks earlier","Hypothesis-driven testing","Balancing speed with rigor across accounts"],
+  strengthenNote:null,skillFocus:null
+},
+"Account Manager":{
+  purpose:"Develop leadership, client ownership, and consistency across accounts.",
+  reflection:["What client or delivery win are you most proud of this month?","Where did your systems (reporting, Asana, communication) work especially well?","What leadership skill would most improve your effectiveness next month?"],
+  supportExamples:["Prioritization or workload calibration","Call or communication coaching","Support handling difficult client dynamics","Clearer escalation boundaries"],
+  working:["Client communication quality & trust","Timelines, agendas, recaps, follow-ups","Reporting accuracy and readiness","Delegation to AS / AC","Issue flagging and escalation judgment"],
+  strengthen:["Proactive risk and timeline management","QA before things leave the pod","Stronger presence on Tier 2-3 calls","Managing multiple accounts calmly"],
+  strengthenNote:null,
+  skillFocus:["Running cleaner meetings","Coaching ASs more intentionally","Anticipating client concerns","Managing multiple priorities calmly"]
+},
+"Senior Account Manager":{
+  purpose:"Strengthen manager effectiveness, strategic thinking, and pod consistency.",
+  reflection:["Where did your leadership have the biggest positive impact on clients or AMs?","What decisions helped your accounts or team run more smoothly?","What leadership capability would most increase your leverage next month?"],
+  supportExamples:["Strategic alignment or roadmap guidance","Support in difficult people conversations","Capacity or resourcing adjustments"],
+  working:["Client stewardship & trust","Strategic roadmaps and narratives","Coaching AMs","Consistency across accounts","Escalation handling"],
+  strengthen:["Letting go of AM execution","Coaching vs fixing","Anticipating issues earlier","Developing AM bench strength"],
+  strengthenNote:null,
+  skillFocus:["Managing managers (not tasks)","Strategy storytelling","Raising standards without friction","Developing AM bench strength"]
+},
+"Associate Director":{
+  purpose:"Assess strategic leadership, pod health, and business impact.",
+  reflection:["What outcomes are you most proud of across revenue, clients, and team this month?","Where did your leadership create clarity or stability for the pod?","What strategic capability would most increase your impact next month?"],
+  supportExamples:["Executive alignment or decision support","Resource or capacity trade-offs","Hiring or role mix decisions","Forecasting or margin guidance"],
+  working:["Executive-level client trust (Tier 1-2)","Strategic roadmaps and QBR quality","Revenue protection and growth leadership","Sr AM effectiveness and accountability"],
+  strengthen:["Earlier identification of churn or performance risk","Stronger long-term planning vs short-term fixes","Developing Sr AMs as independent leaders","Reducing AD-level involvement in execution"],
+  strengthenNote:null,
+  skillFocus:["Revenue protection & expansion","Talent development & bench strength","Executive relationship depth","Operational leverage & process improvement"]
+},
+"Director":{
+  purpose:"Performance, leadership, and trajectory.",
+  reflection:["What is working exceptionally well?","Where is impact strongest (revenue, clients, team)?","Any drift from expectations?"],
+  supportExamples:[],working:[],strengthen:[],strengthenNote:null,skillFocus:null,directorFormat:true
+},
+"Senior Director":{
+  purpose:"Assess strategic leadership, org health, and business impact at the highest level.",
+  reflection:["What outcomes are you most proud of across revenue, clients, and team this month?","Where did your leadership create clarity or stability?","What strategic capability would most increase your impact next month?"],
+  supportExamples:["Executive alignment or decision support","Resource or capacity trade-offs","Hiring or role mix decisions","Forecasting or margin guidance"],
+  working:["Org-wide client satisfaction and retention","Revenue and margin target progress","Leadership team development","Cross-functional alignment"],
+  strengthen:["Earlier identification of systemic risks","Long-term planning vs short-term fixes","Developing Director bench strength"],
+  strengthenNote:null,skillFocus:null
+},
+"Partnerships Director":{
+  purpose:"Remove execution failures that break trust. Strengthen reliability, rigor, and consistency across sub-$30K deal cycle.",
+  reflection:["Which deals moved forward this month and what drove that movement?","Where did responsiveness or follow-through create friction?","What one execution habit would most improve your reliability next month?"],
+  supportExamples:["Call reviews and coaching","Async help on audit builds","Clearer deal prioritization","Outbound strategy calibration"],
+  working:["Responsiveness (same-day / 24h max)","Deal ownership and follow-through","HubSpot hygiene and pipeline accuracy","Audit accuracy and presentation quality","Kickoff readiness and AM handoff","Post-audit follow-up discipline","Outbound consistency and volume"],
+  strengthen:["Zero >7-day deal inactivity","100% HubSpot hygiene","All kickoffs initiated within 48 hours","PTO logged consistently","Audit materials organized and submitted on time","DTR tasks scheduled 30-90 days out","All reactivation touches logged"],
+  strengthenNote:"These are SOP non-negotiables. Patterns that persist will follow the escalation path: performance plan, probation, replacement.",
+  skillFocus:["Outbound volume and consistency","Discovery-to-audit conversion (goal 70%)","Audit-to-close conversion (goal 70%)","Clean communication with clients and prospects"],
+  metrics:{outbound:"x / 600 per month",coldMeetings:"x / 16-24",warmReactivations:"x / 3-5",totalDiscovery:"x / 20-30",auditsPresented:"x / 8-12",discoveryToAudit:"x% (goal 70%)",auditToClose:"x% (goal 70%)",mrrSigned:"$X",closedWonDeals:"x"}
+},
+"Head of Partnerships":{
+  purpose:"Reinforce autonomy, correct leadership drift, hold to SOP, level up accountability across enterprise pipeline and partner ecosystem.",
+  reflection:["Which enterprise deals moved forward without CEO involvement this month?","What leadership decisions did you make independently that improved the system?","Where is the partner ecosystem producing consistent introductions?"],
+  supportExamples:["Calibration on enterprise deal strategy","Async help on partner relationship management","Reviews of leadership and coaching approach","Support for difficult people conversations"],
+  working:["Enterprise pipeline discipline (>$30K deals)","Partner ecosystem health and conversion","Autonomous deal progression without CEO dependency","Leadership and accountability of direct reports","HubSpot hygiene across owned deals","SWAT channel readiness and audit coordination","Routing discipline and deal handoff quality"],
+  strengthen:["Drive all >$30K deals end-to-end without escalation","Immediate correction of direct report gaps with documentation","100% referral-to-BD conversion done correctly","SWAT channel created within 24 hours of audit scheduling","Discovery recording + intake sheet pinned same-day","No avoidance of administrative BD components"],
+  strengthenNote:"Autonomy is the standard. The goal is leadership ownership, not activity volume.",
+  skillFocus:["Enterprise deal progression without CEO","People management and downline accountability","Operational discipline and routing integrity","Calm, decisive leadership under pressure"],
+  metrics:{outboundEmails:"x / 400 (30 agency + 150 T1-2 brand)",fundMeetings:"x / 4",agencyMeetings:"x / 4",brandMeetings:"x / 20",partnerIntros:"x / 4",auditsScheduled:"x",auditsPresented:"x",swatReadiness:"x% (target 100%)",mrrInfluenced:"$x (team goal: $80K-$100K)"}
+}
+};
+
+function renderMonthlyTemplate(){
+  var role=document.getElementById('moRole').value;
+  var emp=document.getElementById('moName').value;
+  var tmpl=monthlyTemplates[role];
+  var container=document.getElementById('monthlyTemplateArea');
+  if(!tmpl){container.innerHTML='';return;}
+
+  var canEditEmp=currentUser?canEditEmployeeSection(currentUser.email,emp):false;
+  var canEditMgr=currentUser?canEditManagerSection(currentUser.email,emp):false;
+
+  var h='<div class="card">';
+  h+='<div class="callout green" style="margin-bottom:1rem;"><strong>Template: '+role+' Monthly Feedback</strong>';
+  h+='<br><span style="font-size:.82rem;">Purpose: '+tmpl.purpose+'</span></div>';
+
+  // Reflection (employee section)
+  h+='<h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🪞 Reflection <span style="font-weight:400;color:var(--text-light);">(employee fills out)</span></h4>';
+  tmpl.reflection.forEach(function(q,i){
+    h+='<p style="font-size:.82rem;font-weight:600;margin:.5rem 0 .2rem;">'+q+'</p>';
+    h+='<textarea class="mo-field mo-emp" data-field="refl'+i+'" rows="2"'+(canEditEmp?'':' disabled style="opacity:.6"')+'></textarea>';
+  });
+
+  // Support
+  if(tmpl.supportExamples.length){
+    h+='<h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🙋 Support Needed</h4>';
+    h+='<p style="font-size:.8rem;color:var(--text-light);margin-bottom:.35rem;">Examples: '+tmpl.supportExamples.join(' · ')+'</p>';
+    h+='<textarea class="mo-field mo-emp" data-field="support" rows="2" placeholder="What support do you need?"'+(canEditEmp?'':' disabled style="opacity:.6"')+'></textarea>';
+  }
+
+  // Manager section
+  if(tmpl.working&&tmpl.working.length){
+    h+='<div class="template-box" style="background:#fff8f0;border-color:var(--accent);margin:1rem 0;"><div class="label" style="color:var(--primary);">Manager Section</div>';
+    h+='<h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">✅ What\'s Working</h4>';
+    h+='<p style="font-size:.8rem;color:var(--text-light);margin-bottom:.35rem;">Look for: '+tmpl.working.join(' · ')+'</p>';
+    h+='<textarea class="mo-field mo-mgr" data-field="mgr_working" rows="3" placeholder="3 bullets max..."'+(canEditMgr?'':' disabled style="opacity:.6"')+'></textarea>';
+
+    h+='<h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🔧 Opportunities to Strengthen</h4>';
+    h+='<p style="font-size:.8rem;color:var(--text-light);margin-bottom:.35rem;">Consider: '+tmpl.strengthen.join(' · ')+'</p>';
+    h+='<textarea class="mo-field mo-mgr" data-field="mgr_strengthen" rows="2" placeholder="1-2 max, be specific..."'+(canEditMgr?'':' disabled style="opacity:.6"')+'></textarea>';
+    if(tmpl.strengthenNote) h+='<p style="font-size:.83rem;font-style:italic;color:var(--accent);margin-top:.35rem;">"'+tmpl.strengthenNote+'"</p>';
+
+    if(tmpl.skillFocus){
+      h+='<h4 style="margin:.75rem 0 .5rem;font-size:.9rem;">🎯 Skill Focus <span style="font-weight:400;color:var(--text-light);">(Pick ONE)</span></h4>';
+      h+='<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0;">';
+      tmpl.skillFocus.forEach(function(s){h+='<label class="rv-radio"><input type="radio" name="mo_skill_focus" value="'+s+'"'+(canEditMgr?'':' disabled')+' style="'+(canEditMgr?'':'opacity:.6')+'"> '+s+'</label>';});
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+
+  // Metrics
+  if(tmpl.metrics){
+    h+='<div class="template-box" style="background:#f0fafa;border-color:var(--accent);margin:1rem 0;"><div class="label">📊 Monthly Metrics</div>';
+    h+='<div class="table-wrap"><table>';
+    Object.keys(tmpl.metrics).forEach(function(k){
+      var label=k.replace(/([A-Z])/g,' $1').replace(/^./,function(s){return s.toUpperCase();});
+      h+='<tr><td style="width:50%;"><strong>'+label+'</strong></td>';
+      h+='<td><input type="text" class="mo-field mo-emp" data-field="metric_'+k+'" placeholder="'+tmpl.metrics[k]+'" style="width:100%;'+(canEditEmp?'':'opacity:.6')+'"'+(canEditEmp?'':' disabled')+'></td></tr>';
+    });
+    h+='</table></div></div>';
+  }
+
+  h+='</div>';
+  container.innerHTML=h;
+}
+
+// ===== LOAD WEEKLY DATA FROM SERVER =====
+function loadWeeklyData(){
+  var emp=document.getElementById('wkName').value;
+  var week=document.getElementById('wkDate').value;
+  if(!emp||!week)return;
+  fetch('/api/feedback?type=weekly&employee='+encodeURIComponent(emp)+'&week='+encodeURIComponent(week))
+    .then(function(r){return r.json();})
+    .then(function(all){
+      if(!Array.isArray(all))return;
+      for(var i=all.length-1;i>=0;i--){
+        if(all[i].employee===emp&&all[i].type==='weekly'){
+          var d=all[i];
+          ['w_wins','w_priority','w_risks','w_reports','w_capacity_note','w_support','w_mgr_notes','w_mgr_priorities','w_mgr_coaching','w_mgr_actions'].forEach(function(id){
+            var el=document.getElementById(id);if(el&&d[id])el.value=d[id];
+          });
+          if(d.capacity){
+            var r=document.querySelector('input[name="w_capacity"][value="'+d.capacity+'"]');
+            if(r)r.checked=true;
+          }
+          break;
+        }
+      }
+    }).catch(function(){});
+}
+
+// ===== SAVE / EXPORT =====
+function saveCheckin(type){
+  var data={type:type,date:new Date().toISOString(),savedBy:currentUser?currentUser.email:''};
+
+  if(type==='weekly'){
+    data.employee=document.getElementById('wkName').value;
+    data.role=document.getElementById('wkRole').value;
+    data.manager=document.getElementById('wkManager').value;
+    data.week=document.getElementById('wkDate').value;
+    ['w_wins','w_priority','w_risks','w_reports','w_capacity_note','w_support','w_mgr_notes','w_mgr_priorities','w_mgr_coaching','w_mgr_actions'].forEach(function(id){
+      var el=document.getElementById(id);if(el)data[id]=el.value;
+    });
+    var cap=document.querySelector('input[name="w_capacity"]:checked');
+    data.capacity=cap?cap.value:'';
+  } else {
+    data.employee=document.getElementById('moName').value;
+    data.role=document.getElementById('moRole').value;
+    data.manager=document.getElementById('moManager').value;
+    data.month=document.getElementById('moMonth').value;
+    document.querySelectorAll('.mo-field').forEach(function(el){
+      data[el.dataset.field]=el.value||el.textContent;
+    });
+    var sf=document.querySelector('input[name="mo_skill_focus"]:checked');
+    data.skillFocus=sf?sf.value:'';
+  }
+  fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(e){console.error(e);});
+  var banner=document.getElementById(type==='weekly'?'wkSaved':'moSaved');
+  banner.style.display='block';setTimeout(function(){banner.style.display='none';},2000);
+}
+
+function exportCheckin(type){
+  var lines=[];
+  if(type==='weekly'){
+    lines.push('WEEKLY SYNC - '+document.getElementById('wkName').value+' ('+document.getElementById('wkRole').value+')');
+    lines.push('Manager: '+document.getElementById('wkManager').value+' | Week of: '+document.getElementById('wkDate').value);
+    lines.push('');
+    [['Wins','w_wins'],['Top Priority','w_priority'],['Risks/Blockers','w_risks'],['Direct Reports','w_reports'],['Support Needed','w_support']].forEach(function(p){
+      var el=document.getElementById(p[1]);
+      if(el&&el.value)lines.push(p[0]+':\n'+el.value+'\n');
+    });
+    lines.push('--- Manager ---');
+    [['Notes','w_mgr_notes'],['Priorities','w_mgr_priorities'],['Coaching','w_mgr_coaching'],['Actions','w_mgr_actions']].forEach(function(p){
+      var el=document.getElementById(p[1]);
+      if(el&&el.value)lines.push(p[0]+':\n'+el.value+'\n');
+    });
+  } else {
+    lines.push('MONTHLY FEEDBACK - '+document.getElementById('moName').value+' ('+document.getElementById('moRole').value+')');
+    lines.push('Manager: '+document.getElementById('moManager').value+' | '+document.getElementById('moMonth').value);
+    lines.push('');
+    document.querySelectorAll('.mo-field').forEach(function(el){
+      if(el.value) lines.push(el.dataset.field+': '+el.value);
+    });
+  }
+  navigator.clipboard.writeText(lines.join('\n'));
+  showToast('Copied to clipboard!');
+}
+
+// ===== LINK TABS =====
+function switchLinkTab(tab,el){
+  document.getElementById('linkPanelMonthly').style.display=tab==='monthly'?'':'none';
+  document.getElementById('linkPanelWeekly').style.display=tab==='weekly'?'':'none';
+  document.querySelectorAll('#sec-links .tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  if(tab==='monthly')renderLinks();
+  if(tab==='weekly')renderWeeklyLinks();
+}
+
+(function(){var d=document.getElementById('linkWeekDate');if(d)d.valueAsDate=new Date();})();
+
+function renderWeeklyLinks(){
+  var dateEl=document.getElementById('linkWeekDate');
+  var weekLabel=dateEl.value?new Date(dateEl.value+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'This Week';
+  var base=window.location.origin+'/weekly-form.html';
+  var viewerEmail=localStorage.getItem('tt_google_email')||'';
+  var h='<table><tr><th>Employee</th><th>Role</th><th>Manager</th><th>Actions</th></tr>';
+  Object.keys(orgChart).sort().forEach(function(name){
+    var p=orgChart[name];if(!p.manager)return;
+    if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
+    var url=base+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(roleMap[p.role]||p.role)+'&week='+encodeURIComponent(weekLabel);
+    h+='<tr><td><strong>'+name+'</strong></td><td style="color:var(--text-light);">'+p.role+'</td><td style="color:var(--text-light);">'+p.manager+'</td>';
+    h+='<td><button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText(\''+url.replace(/'/g,"\\'")+'\');showToast(\'Copied!\')">📋</button> ';
+    h+='<a href="'+url+'" target="_blank" style="font-size:.75rem;color:var(--accent);">Open</a></td></tr>';
+  });
+  h+='</table>';
+  document.getElementById('wkLinkTable').innerHTML=h;
+}
+
+function renderLinks(){
+  var month=document.getElementById('linkMonth').value;
+  var base=window.location.origin+'/feedback-form.html';
+  var viewerEmail=localStorage.getItem('tt_google_email')||'';
+  var h='<table><tr><th>Employee</th><th>Role</th><th>Manager</th><th>Actions</th></tr>';
+  Object.keys(orgChart).sort().forEach(function(name){
+    var p=orgChart[name];if(!p.manager)return;
+    if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
+    var t=btoa(name+'-'+month).replace(/=/g,'');
+    var url=base+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(p.role)+'&month='+encodeURIComponent(month)+'&t='+t;
+    h+='<tr><td><strong>'+name+'</strong></td><td style="color:var(--text-light);">'+p.role+'</td><td style="color:var(--text-light);">'+p.manager+'</td>';
+    h+='<td><button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText(\''+url.replace(/'/g,"\\'")+'\');showToast(\'Copied!\')">📋</button> ';
+    h+='<a href="'+url+'" target="_blank" style="font-size:.75rem;color:var(--accent);">Open</a></td></tr>';
+  });
+  h+='</table>';
+  document.getElementById('linkTable').innerHTML=h;
+}
+
+function copyAllLinks(type){
+  var lines=[];
+  var viewerEmail=localStorage.getItem('tt_google_email')||'';
+  if(type==='weekly'){
+    var dateEl=document.getElementById('linkWeekDate');
+    var weekLabel=dateEl.value?new Date(dateEl.value+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'This Week';
+    var base=window.location.origin+'/weekly-form.html';
+    Object.keys(orgChart).sort().forEach(function(name){
+      var p=orgChart[name];if(!p.manager)return;
+      if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
+      var url=base+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(roleMap[p.role]||p.role)+'&week='+encodeURIComponent(weekLabel);
+      lines.push(name+' ('+p.role+')\n'+url);
+    });
+    navigator.clipboard.writeText(lines.join('\n\n'));
+    var el=document.getElementById('wkLinkCopyOk');el.style.display='inline';setTimeout(function(){el.style.display='none';},1500);
+  } else {
+    var month=document.getElementById('linkMonth').value;
+    var base2=window.location.origin+'/feedback-form.html';
+    Object.keys(orgChart).sort().forEach(function(name){
+      var p=orgChart[name];if(!p.manager)return;
+      if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
+      var t=btoa(name+'-'+month).replace(/=/g,'');
+      var url=base2+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(p.role)+'&month='+encodeURIComponent(month)+'&t='+t;
+      lines.push(name+' ('+p.role+')\n'+url);
+    });
+    navigator.clipboard.writeText(lines.join('\n\n'));
+    var el2=document.getElementById('linkCopyOk');el2.style.display='inline';setTimeout(function(){el2.style.display='none';},1500);
+  }
+}
+
+// ===== PEER FEEDBACK =====
+function submitPeerFeedback(){
+  var recipient=document.getElementById('peerRecipient').value;
+  var delivery=document.getElementById('peerDelivery').value;
+  var anonRadio=document.querySelector('input[name="peerAnon"]:checked');
+  var isAnonymous=anonRadio?anonRadio.value==='anonymous':true;
+  var feedbackType=document.getElementById('peerType').value;
+  var message=document.getElementById('peerMessage').value.trim();
+
+  if(!recipient){showToast('Please select a team member.');return;}
+  if(!message){showToast('Please write your feedback.');return;}
+
+  var data={
+    type:'peer',
+    employee:recipient,
+    delivery:delivery,
+    anonymous:isAnonymous,
+    sender:isAnonymous?'Anonymous':(currentUser?currentUser.name:'Unknown'),
+    senderEmail:isAnonymous?null:(currentUser?currentUser.email:null),
+    feedbackType:feedbackType,
+    message:message,
+    date:new Date().toISOString()
+  };
+
+  // Add manager info for routing
+  var empData=orgChart[recipient];
+  if(empData) data.manager=empData.manager;
+
+  fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(function(){
+      document.getElementById('peerSuccess').style.display='block';
+      document.getElementById('peerMessage').value='';
+      document.getElementById('peerRecipient').selectedIndex=0;
+      setTimeout(function(){document.getElementById('peerSuccess').style.display='none';},3000);
+    })
+    .catch(function(){showToast('Error submitting feedback.');});
+}
+
+// ===== SUBMISSIONS =====
+function loadSubmissions(){
+  if(!currentUser)return;
+  fetch('/api/feedback').then(function(r){return r.json();}).then(function(data){
+    var container=document.getElementById('subList');
+    if(!data.length){container.innerHTML='<p style="color:var(--text-light);text-align:center;">No submissions yet.</p>';return;}
+
+    var typeFilter=document.getElementById('subFilter').value;
+    var empFilter=document.getElementById('subEmployee').value;
+    var filtered=data.filter(function(d){
+      if(typeFilter!=='all'&&d.type!==typeFilter)return false;
+      if(empFilter&&d.employee!==empFilter)return false;
+      // Visibility check
+      if(!canViewEmployee(currentUser.email,d.employee))return false;
+      // For peer feedback routed to manager only, hide from the individual
+      if(d.type==='peer'&&d.delivery==='manager'){
+        var viewerName=REVERSE_EMAIL[currentUser.email.toLowerCase()];
+        if(viewerName===d.employee)return false; // individual can't see manager-only feedback
+      }
+      return true;
+    });
+
+    filtered.sort(function(a,b){return new Date(b.submittedAt||b.submitted||b.date)-new Date(a.submittedAt||a.submitted||a.date);});
+    if(!filtered.length){container.innerHTML='<p style="color:var(--text-light);text-align:center;">No submissions match filters or you don\'t have access.</p>';return;}
+
+    var h='';
+    filtered.forEach(function(d){
+      var date=new Date(d.submittedAt||d.submitted||d.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+      var typeLabel=d.type==='weekly'?'📅 Weekly':d.type==='monthly'?'📊 Monthly':'💬 Peer';
+      var period=d.week||d.month||'';
+      var releaseBadge=d.released?'<span class="badge badge-green" style="margin-left:.5rem;">Released</span>':'';
+
+      h+='<details style="margin-bottom:.5rem;border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;">';
+      h+='<summary style="cursor:pointer;font-size:.85rem;">'+typeLabel+' <strong>'+d.employee+'</strong>'+(d.role?' ('+d.role+')':'')+' - '+period+releaseBadge;
+      h+='<span style="float:right;color:var(--text-light);font-size:.72rem;">'+date+'</span></summary>';
+      h+='<div style="margin-top:.5rem;font-size:.82rem;">';
+
+      if(d.type==='peer'){
+        // Peer feedback display
+        var typeEmoji={'praise':'🌟','constructive':'🔧','suggestion':'💡','concern':'⚠️'};
+        h+='<p><strong>Type:</strong> '+(typeEmoji[d.feedbackType]||'')+' '+(d.feedbackType||'feedback')+'</p>';
+        h+='<p><strong>From:</strong> '+(d.anonymous?'🕶️ Anonymous':d.sender)+'</p>';
+        h+='<p><strong>Delivered to:</strong> '+(d.delivery==='individual'?'Individual only':d.delivery==='manager'?'Manager only':'Both')+'</p>';
+        h+='<p style="margin-top:.5rem;white-space:pre-wrap;">'+d.message+'</p>';
+      } else if(d.type==='weekly'){
+        if(d.wins||d.w_wins)h+='<p><strong>🏆 Wins:</strong> '+(d.wins||d.w_wins)+'</p>';
+        if(d.priority||d.w_priority)h+='<p><strong>🎯 Priority:</strong> '+(d.priority||d.w_priority)+'</p>';
+        if(d.risks||d.w_risks)h+='<p><strong>⚠️ Risks:</strong> '+(d.risks||d.w_risks)+'</p>';
+        if(d.reports||d.w_reports)h+='<p><strong>👥 Reports:</strong> '+(d.reports||d.w_reports)+'</p>';
+        if(d.capacity)h+='<p><strong>📊 Capacity:</strong> '+d.capacity+'</p>';
+        if(d.support||d.w_support)h+='<p><strong>🙋 Support:</strong> '+(d.support||d.w_support)+'</p>';
+
+        // Manager section visibility
+        var canSeeMgr=canEditManagerSection(currentUser.email,d.employee)||d.released;
+        if(canSeeMgr){
+          if(d.w_mgr_notes||d.w_mgr_priorities||d.w_mgr_coaching||d.w_mgr_actions){
+            h+='<hr style="margin:.5rem 0;border-color:var(--border);">';
+            h+='<p style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;">Manager Notes</p>';
+            if(d.w_mgr_notes)h+='<p><strong>📝 Notes:</strong> '+d.w_mgr_notes+'</p>';
+            if(d.w_mgr_priorities)h+='<p><strong>🎯 Priorities:</strong> '+d.w_mgr_priorities+'</p>';
+            if(d.w_mgr_coaching)h+='<p><strong>💬 Coaching:</strong> '+d.w_mgr_coaching+'</p>';
+            if(d.w_mgr_actions)h+='<p><strong>📌 Actions:</strong> '+d.w_mgr_actions+'</p>';
+          }
+        } else {
+          h+='<div style="padding:.5rem;background:#fef3c7;border-radius:6px;margin-top:.5rem;font-size:.78rem;color:#92400e;">🔒 Manager notes will be visible after your check-in meeting.</div>';
+        }
+      } else {
+        // Monthly
+        ['refl0','refl1','refl2'].forEach(function(k){if(d[k])h+='<p>'+d[k]+'</p>';});
+        if(d.support)h+='<p><strong>🙋 Support:</strong> '+d.support+'</p>';
+
+        var canSeeMgr2=canEditManagerSection(currentUser.email,d.employee)||d.released;
+        if(canSeeMgr2){
+          if(d.mgr_working||d.mgr_strengthen){
+            h+='<hr style="margin:.5rem 0;border-color:var(--border);">';
+            h+='<p style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;">Manager Assessment</p>';
+            if(d.mgr_working)h+='<p><strong>✅ Working:</strong> '+d.mgr_working+'</p>';
+            if(d.mgr_strengthen)h+='<p><strong>🔧 Strengthen:</strong> '+d.mgr_strengthen+'</p>';
+          }
+        } else {
+          h+='<div style="padding:.5rem;background:#fef3c7;border-radius:6px;margin-top:.5rem;font-size:.78rem;color:#92400e;">🔒 Manager assessment will be visible after your feedback review meeting.</div>';
+        }
+        if(d.additionalComments)h+='<p><strong>Additional:</strong> '+d.additionalComments+'</p>';
+      }
+
+      // Release button (managers/admins only, not peer feedback)
+      if(!d.released&&d.type!=='peer'&&canEditManagerSection(currentUser.email,d.employee)){
+        h+='<div style="margin-top:.5rem;"><button class="btn btn-sm" style="background:var(--success);" onclick="releaseSubmission(\''+d.employee.replace(/'/g,"\\'")+'\',\''+d.type+'\',\''+(d.week||d.month||'').replace(/'/g,"\\'")+'\')">✅ Release to Employee (Meeting Complete)</button></div>';
+      }
+
+      h+='</div></details>';
+    });
+    container.innerHTML=h;
+  }).catch(function(){document.getElementById('subList').innerHTML='<p style="color:var(--text-light);">Could not load submissions.</p>';});
+}
+
+function releaseSubmission(employee,type,period){
+  fetch('/api/feedback/release',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({employee:employee,type:type,period:period})})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d.ok){showToast('Released to employee!');loadSubmissions();}})
+    .catch(function(e){showToast('Error: '+e.message);});
+}
+
+// ===== SEND EMAIL REMINDERS =====
+function sendReminders(type){
+  var period;
+  if(type==='monthly') period=document.getElementById('linkMonth').value;
+  else {
+    var dateEl=document.getElementById('linkWeekDate');
+    period=dateEl.value?new Date(dateEl.value+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'This Week';
+  }
+  if(!confirm('Send '+type+' check-in reminder emails to all team members for "'+period+'"?'))return;
+
+  var okId=type==='weekly'?'wkEmailOk':'moEmailOk';
+  var el=document.getElementById(okId);
+  el.textContent='Sending...';el.style.display='inline';
+
+  fetch('/api/send-reminders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,period:period})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        var sent=d.results.filter(function(r){return r.sent;}).length;
+        el.textContent='Sent to '+sent+' team members!';
+      } else {
+        el.textContent='Error: '+(d.error||'Unknown');el.style.color='var(--danger)';
+      }
+      setTimeout(function(){el.style.display='none';el.style.color='var(--success)';},4000);
+    })
+    .catch(function(){el.textContent='Failed';setTimeout(function(){el.style.display='none';},2000);});
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';
+  setTimeout(function(){t.style.display='none';},1500);
+}
+</script>
+</body>
+</html>
