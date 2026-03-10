@@ -439,25 +439,20 @@ th { background:var(--bg); font-weight:700; }
 
 <!-- ============ SUBMISSIONS ============ -->
 <div class="section" id="sec-submissions">
-  <h2 class="page-title">📬 Submitted Feedback</h2>
-  <div class="card" style="margin-bottom:.75rem;">
+  <h2 class="page-title">📬 Submissions</h2>
+  <div class="card" style="margin-bottom:.75rem;padding:.75rem 1rem;">
     <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-      <label style="margin:0;">Filter:</label>
-      <select id="subFilter" onchange="loadSubmissions()" style="max-width:200px;">
+      <label style="margin:0;font-size:.82rem;">Filter:</label>
+      <select id="subFilter" onchange="loadSubmissions()" style="max-width:180px;font-size:.82rem;">
         <option value="all">All Types</option>
-        <option value="weekly">Weekly Only</option>
-        <option value="monthly">Monthly Only</option>
+        <option value="weekly">Weekly 1:1 Only</option>
+        <option value="monthly">Monthly Feedback Only</option>
         <option value="peer">Peer Feedback Only</option>
       </select>
-      <label style="margin:0;">Employee:</label>
-      <select id="subEmployee" onchange="loadSubmissions()" style="max-width:200px;">
-        <option value="">All</option>
-      </select>
+      <input id="subSearch" type="text" placeholder="Search name..." onkeyup="loadSubmissions()" style="max-width:180px;font-size:.82rem;padding:.35rem .6rem;border:1px solid var(--border);border-radius:6px;">
     </div>
   </div>
-  <div class="card" id="subList">
-    <p style="color:var(--text-light);font-size:.85rem;">Loading...</p>
-  </div>
+  <div id="subFolders"></div>
 </div>
 
 </div><!-- /container -->
@@ -468,7 +463,7 @@ th { background:var(--bg); font-weight:700; }
 // ===== GOOGLE AUTH =====
 var currentUser = null; // {email, name}
 
-var EMAIL_MAP={"Riley Abercrombie":"riley@tigertracks.ai","Hannah Price":"hannah@tigertracks.ai","Charlotte Pohl":"charlotte@tigertracks.ai","Allison Long":"allison@tigertracks.ai","Rachel Scharett":"rachael@tigertracks.ai","Shelby Nations":"shelby@tigertracks.ai","Owen Phipps":"owen@tigertracks.ai","Megan Brenneke":"meganb@tigertracks.ai","Seth McDaniel":"seth@tigertracks.ai","Mary McCambridge":"mary@tigertracks.ai","Will Sokol":"will@tigertracks.ai","Gretchen Hess":"gretchen@tigertracks.ai","Megan Klein":"megank@tigertracks.ai","Daren Kalkoffen":"daren@tigertracks.ai","Evin Leclerc":"evin@tigertracks.ai","Kiyana Saidi-Nejad":"kiyana@tigertracks.ai","Bruno Milalaf":"bruno@tigertracks.ai","Billy Bevevino":"billy@tigertracks.ai","Tate Dewey":"tate@tigertracks.ai","Sanad Shuman":"sanad@tigertracks.ai","Alex Blumberg":"alex@tigertracks.ai","Steven Jatich":"steven@tigertracks.ai","Kersten Kruse":"kersten@tigertracks.ai","Anirudh Venkat":"anirudh@tigertracks.ai","Ashley Kaika":"ashley@tigertracks.ai"};
+var EMAIL_MAP={"Riley Abercrombie":"riley@tigertracks.ai","Hannah Price":"hannah@tigertracks.ai","Charlotte Pohl":"charlotte@tigertracks.ai","Allison Long":"allison@tigertracks.ai","Rachel Scharett":"rachael@tigertracks.ai","Shelby Nations":"shelby@tigertracks.ai","Owen Phipps":"owen@tigertracks.ai","Megan Brenneke":"meganb@tigertracks.ai","Seth McDaniel":"seth@tigertracks.ai","Mary McCambridge":"mary@tigertracks.ai","Will Sokol":"will@tigertracks.ai","Gretchen Hess":"gretchen@tigertracks.ai","Megan Klein":"megank@tigertracks.ai","Daren Kalkoffen":"daren@tigertracks.ai","Evin Leclerc":"evin@tigertracks.ai","Kiyana Saidi-Nejad":"kiyana@tigertracks.ai","Billy Bevevino":"billy@tigertracks.ai","Tate Dewey":"tate@tigertracks.ai","Sanad Shuman":"sanad@tigertracks.ai","Alex Blumberg":"alex@tigertracks.ai","Steven Jatich":"steven@tigertracks.ai","Kersten Kruse":"kersten@tigertracks.ai","Anirudh Venkat":"anirudh@tigertracks.ai","Ashley Kaika":"ashley@tigertracks.ai"};
 var REVERSE_EMAIL={};
 Object.keys(EMAIL_MAP).forEach(function(n){REVERSE_EMAIL[EMAIL_MAP[n].toLowerCase()]=n;});
 
@@ -525,12 +520,12 @@ function signOut(){
 var orgChart = {
   "Riley Abercrombie":{manager:"Rachel Scharett",role:"Associate Director",reports:["Shelby Nations","Owen Phipps"],practice:"am"},
   "Hannah Price":{manager:"Rachel Scharett",role:"Associate Director",reports:["Mary McCambridge","Will Sokol"],practice:"am"},
-  "Charlotte Pohl":{manager:"Rachel Scharett",role:"Associate Director",reports:["Kiyana Saidi-Nejad","Bruno Milalaf","Billy Bevevino","Sanad Shuman"],practice:"am"},
-  "Allison Long":{manager:"Rachel Scharett",role:"Senior Account Manager",practice:"am"},
-  "Rachel Scharett":{manager:"",role:"Senior Director",reports:["Riley Abercrombie","Hannah Price","Charlotte Pohl","Allison Long"],practice:"am"},
-  "Shelby Nations":{manager:"Riley Abercrombie",role:"Senior Account Manager",reports:["Megan Brenneke","Seth McDaniel"],practice:"am"},
-  "Owen Phipps":{manager:"Riley Abercrombie",role:"Account Strategist",practice:"am"},
-  "Megan Brenneke":{manager:"Shelby Nations",role:"Account Coordinator",practice:"am"},
+  "Charlotte Pohl":{manager:"Rachel Scharett",role:"Associate Director",reports:["Allison Long","Kiyana Saidi-Nejad"],practice:"am"},
+  "Allison Long":{manager:"Charlotte Pohl",role:"Senior Account Manager",practice:"am"},
+  "Rachel Scharett":{manager:"",role:"Senior Director",reports:["Riley Abercrombie","Hannah Price","Charlotte Pohl"],practice:"am"},
+  "Shelby Nations":{manager:"Riley Abercrombie",role:"Senior Account Manager",reports:["Megan Brenneke","Seth McDaniel","Owen Phipps"],practice:"am"},
+  "Owen Phipps":{manager:"Shelby Nations",role:"Account Strategist",practice:"am"},
+  "Megan Brenneke":{manager:"Shelby Nations",role:"Account Strategist",practice:"am"},
   "Seth McDaniel":{manager:"Shelby Nations",role:"Account Strategist",practice:"am"},
   "Mary McCambridge":{manager:"Hannah Price",role:"Senior Account Manager",reports:["Gretchen Hess"],practice:"am"},
   "Will Sokol":{manager:"Hannah Price",role:"Senior Account Manager",reports:["Megan Klein"],practice:"am"},
@@ -538,11 +533,10 @@ var orgChart = {
   "Megan Klein":{manager:"Will Sokol",role:"Account Manager",practice:"am"},
   "Daren Kalkoffen":{manager:"Gretchen Hess",role:"Account Strategist",practice:"am"},
   "Evin Leclerc":{manager:"Gretchen Hess",role:"Account Coordinator",practice:"am"},
-  "Kiyana Saidi-Nejad":{manager:"Charlotte Pohl",role:"Account Manager",reports:["Tate Dewey"],practice:"am"},
-  "Bruno Milalaf":{manager:"Charlotte Pohl",role:"Account Manager",practice:"am"},
-  "Billy Bevevino":{manager:"Charlotte Pohl",role:"Account Manager",practice:"am"},
+  "Kiyana Saidi-Nejad":{manager:"Charlotte Pohl",role:"Account Manager",reports:["Billy Bevevino","Tate Dewey"],practice:"am"},
+  "Billy Bevevino":{manager:"Kiyana Saidi-Nejad",role:"Account Strategist",reports:["Sanad Shuman"],practice:"am"},
   "Tate Dewey":{manager:"Kiyana Saidi-Nejad",role:"Account Strategist",practice:"am"},
-  "Sanad Shuman":{manager:"Charlotte Pohl",role:"Account Coordinator",practice:"am"},
+  "Sanad Shuman":{manager:"Billy Bevevino",role:"Account Coordinator",practice:"am"},
   "Alex Blumberg":{manager:"Ashley Kaika",role:"Head of Partnerships",practice:"part"},
   "Steven Jatich":{manager:"Ashley Kaika",role:"Partnerships Director",practice:"part"},
   "Kersten Kruse":{manager:"Ashley Kaika",role:"Director of Marketing",reports:["Anirudh Venkat"],practice:"mkt"},
@@ -1098,11 +1092,51 @@ function submitPeerFeedback(){
     .catch(function(){showToast('Error submitting feedback.');});
 }
 
+// ===== SUBMISSION PERMISSIONS (per Eliz spec) =====
+var SUBMISSION_VISIBILITY = {
+  "cliff@tigertracks.ai":       "ALL",
+  "henry@tigertracks.ai":       "ALL",
+  "elizabeth@tigertracks.ai":   "ALL",
+  "rachael@tigertracks.ai":     "ALL_AM",
+  "riley@tigertracks.ai":       ["Shelby Nations","Owen Phipps","Megan Brenneke","Seth McDaniel"],
+  "hannah@tigertracks.ai":      ["Mary McCambridge","Will Sokol","Gretchen Hess","Daren Kalkoffen","Evin Leclerc","Megan Klein"],
+  "charlotte@tigertracks.ai":   ["Allison Long","Kiyana Saidi-Nejad","Tate Dewey","Billy Bevevino","Sanad Shuman"],
+  "shelby@tigertracks.ai":      ["Megan Brenneke","Seth McDaniel"],
+  "mary@tigertracks.ai":        ["Gretchen Hess"],
+  "gretchen@tigertracks.ai":    ["Daren Kalkoffen","Evin Leclerc"],
+  "will@tigertracks.ai":        ["Megan Klein"],
+  "kiyana@tigertracks.ai":      ["Tate Dewey"]
+};
+
+var AM_TEAM = ["Riley Abercrombie","Hannah Price","Charlotte Pohl","Allison Long","Rachel Scharett",
+  "Shelby Nations","Owen Phipps","Megan Brenneke","Seth McDaniel","Mary McCambridge","Will Sokol",
+  "Gretchen Hess","Megan Klein","Daren Kalkoffen","Evin Leclerc","Kiyana Saidi-Nejad",
+  "Billy Bevevino","Tate Dewey","Sanad Shuman"];
+
+function getVisiblePeople(email){
+  var e = email.toLowerCase();
+  var rule = SUBMISSION_VISIBILITY[e];
+  var viewerName = REVERSE_EMAIL[e];
+  var visible = [];
+
+  if(rule === "ALL") {
+    visible = Object.keys(orgChart);
+  } else if(rule === "ALL_AM") {
+    visible = AM_TEAM.slice();
+  } else if(Array.isArray(rule)) {
+    visible = rule.slice();
+  }
+
+  // Everyone always sees themselves
+  if(viewerName && visible.indexOf(viewerName) < 0) visible.push(viewerName);
+  return visible;
+}
+
 // ===== SUBMISSIONS =====
 function loadSubmissions(){
   if(!currentUser)return;
   fetch('/api/feedback').then(function(r){return r.json();}).then(function(data){
-    var container=document.getElementById('subList');
+    var container=document.getElementById('subFolders');
     if(!data.length){container.innerHTML='<p style="color:var(--text-light);text-align:center;">No submissions yet.</p>';return;}
 
     var typeFilter=document.getElementById('subFilter').value;
@@ -1120,78 +1154,155 @@ function loadSubmissions(){
       return true;
     });
 
-    filtered.sort(function(a,b){return new Date(b.submittedAt||b.submitted||b.date)-new Date(a.submittedAt||a.submitted||a.date);});
-    if(!filtered.length){container.innerHTML='<p style="color:var(--text-light);text-align:center;">No submissions match filters or you don\'t have access.</p>';return;}
+    var typeFilter = document.getElementById('subFilter').value;
+    var searchQ = (document.getElementById('subSearch').value||'').toLowerCase();
 
-    var h='';
-    filtered.forEach(function(d){
-      var date=new Date(d.submittedAt||d.submitted||d.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
-      var typeLabel=d.type==='weekly'?'📅 Weekly':d.type==='monthly'?'📊 Monthly':'💬 Peer';
-      var period=d.week||d.month||'';
-      var releaseBadge=d.released?'<span class="badge badge-green" style="margin-left:.5rem;">Released</span>':'';
+    // Build per-person map
+    var byPerson = {};
+    data.forEach(function(d){
+      if(!byPerson[d.employee]) byPerson[d.employee] = [];
+      byPerson[d.employee].push(d);
+    });
 
-      h+='<details style="margin-bottom:.5rem;border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;">';
-      h+='<summary style="cursor:pointer;font-size:.85rem;">'+typeLabel+' <strong>'+d.employee+'</strong>'+(d.role?' ('+d.role+')':'')+' - '+period+releaseBadge;
-      h+='<span style="float:right;color:var(--text-light);font-size:.72rem;">'+date+'</span></summary>';
-      h+='<div style="margin-top:.5rem;font-size:.82rem;">';
+    // Get which people current user can see
+    var visible = getVisiblePeople(currentUser.email);
+
+    // Filter by search
+    if(searchQ) visible = visible.filter(function(n){ return n.toLowerCase().indexOf(searchQ) >= 0; });
+
+    // Sort: self first, then alphabetical
+    var viewerName = REVERSE_EMAIL[currentUser.email.toLowerCase()];
+    visible.sort(function(a,b){
+      if(a===viewerName) return -1;
+      if(b===viewerName) return 1;
+      return a.localeCompare(b);
+    });
+
+    if(!visible.length){
+      container.innerHTML='<p style="color:var(--text-light);text-align:center;padding:2rem;">No people found.</p>';
+      return;
+    }
+
+    function renderSubmissionDoc(d){
+      var h='';
+      var date = new Date(d.submittedAt||d.submitted||d.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      var period = d.week||d.month||'';
+      var releaseBadge = d.released ? '<span style="background:#16a34a;color:#fff;font-size:.65rem;padding:1px 6px;border-radius:4px;margin-left:.4rem;">Released</span>' : '';
+
+      h+='<details style="margin-bottom:.4rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;">';
+      h+='<summary style="cursor:pointer;font-size:.82rem;padding:.5rem .75rem;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;">';
+      h+='<span>'+(d.type==='weekly'?'📅 Weekly 1:1':'d.type'==='monthly'?'📊 Monthly Feedback':'💬 Peer Feedback');
+      // fix ternary
+      if(d.type==='weekly') h='<details style="margin-bottom:.4rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;"><summary style="cursor:pointer;font-size:.82rem;padding:.5rem .75rem;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;"><span>📅 Weekly 1:1';
+      else if(d.type==='monthly') h='<details style="margin-bottom:.4rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;"><summary style="cursor:pointer;font-size:.82rem;padding:.5rem .75rem;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;"><span>📊 Monthly Feedback';
+      else h='<details style="margin-bottom:.4rem;border:1px solid var(--border);border-radius:8px;overflow:hidden;"><summary style="cursor:pointer;font-size:.82rem;padding:.5rem .75rem;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;"><span>💬 Peer Feedback';
+      if(period) h+=' - <strong>'+period+'</strong>';
+      h+=releaseBadge+'</span>';
+      h+='<span style="color:var(--text-light);font-size:.72rem;">'+date+'</span></summary>';
+      h+='<div style="padding:.75rem;font-size:.82rem;">';
 
       if(d.type==='peer'){
-        // Peer feedback display
         var typeEmoji={'praise':'🌟','constructive':'🔧','suggestion':'💡','concern':'⚠️'};
-        h+='<p><strong>Type:</strong> '+(typeEmoji[d.feedbackType]||'')+' '+(d.feedbackType||'feedback')+'</p>';
-        h+='<p><strong>From:</strong> '+(d.anonymous?'🕶️ Anonymous':d.sender)+'</p>';
-        h+='<p><strong>Delivered to:</strong> '+(d.delivery==='individual'?'Individual only':d.delivery==='manager'?'Manager only':'Both')+'</p>';
-        h+='<p style="margin-top:.5rem;white-space:pre-wrap;">'+d.message+'</p>';
+        h+='<p><strong>Type:</strong> '+(typeEmoji[d.feedbackType]||'')+' '+(d.feedbackType||'')+'</p>';
+        h+='<p><strong>From:</strong> '+(d.anonymous?'🕶️ Anonymous':d.sender||'Unknown')+'</p>';
+        h+='<p style="margin-top:.4rem;white-space:pre-wrap;">'+d.message+'</p>';
       } else if(d.type==='weekly'){
         if(d.wins||d.w_wins)h+='<p><strong>🏆 Wins:</strong> '+(d.wins||d.w_wins)+'</p>';
         if(d.priority||d.w_priority)h+='<p><strong>🎯 Priority:</strong> '+(d.priority||d.w_priority)+'</p>';
         if(d.risks||d.w_risks)h+='<p><strong>⚠️ Risks:</strong> '+(d.risks||d.w_risks)+'</p>';
-        if(d.reports||d.w_reports)h+='<p><strong>👥 Reports:</strong> '+(d.reports||d.w_reports)+'</p>';
         if(d.capacity)h+='<p><strong>📊 Capacity:</strong> '+d.capacity+'</p>';
         if(d.support||d.w_support)h+='<p><strong>🙋 Support:</strong> '+(d.support||d.w_support)+'</p>';
-
-        // Manager section visibility
         var canSeeMgr=canEditManagerSection(currentUser.email,d.employee)||d.released;
-        if(canSeeMgr){
-          if(d.w_mgr_notes||d.w_mgr_priorities||d.w_mgr_coaching||d.w_mgr_actions){
-            h+='<hr style="margin:.5rem 0;border-color:var(--border);">';
-            h+='<p style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;">Manager Notes</p>';
-            if(d.w_mgr_notes)h+='<p><strong>📝 Notes:</strong> '+d.w_mgr_notes+'</p>';
-            if(d.w_mgr_priorities)h+='<p><strong>🎯 Priorities:</strong> '+d.w_mgr_priorities+'</p>';
-            if(d.w_mgr_coaching)h+='<p><strong>💬 Coaching:</strong> '+d.w_mgr_coaching+'</p>';
-            if(d.w_mgr_actions)h+='<p><strong>📌 Actions:</strong> '+d.w_mgr_actions+'</p>';
-          }
-        } else {
-          h+='<div style="padding:.5rem;background:#fef3c7;border-radius:6px;margin-top:.5rem;font-size:.78rem;color:#92400e;">🔒 Manager notes will be visible after your check-in meeting.</div>';
+        if(canSeeMgr&&(d.w_mgr_notes||d.w_mgr_priorities||d.w_mgr_coaching||d.w_mgr_actions)){
+          h+='<hr style="margin:.4rem 0;border-color:var(--border);"><p style="font-size:.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:.25rem;">Manager Notes</p>';
+          if(d.w_mgr_notes)h+='<p><strong>Notes:</strong> '+d.w_mgr_notes+'</p>';
+          if(d.w_mgr_priorities)h+='<p><strong>Priorities:</strong> '+d.w_mgr_priorities+'</p>';
+          if(d.w_mgr_coaching)h+='<p><strong>Coaching:</strong> '+d.w_mgr_coaching+'</p>';
+          if(d.w_mgr_actions)h+='<p><strong>Actions:</strong> '+d.w_mgr_actions+'</p>';
+        } else if(!canSeeMgr){
+          h+='<div style="padding:.4rem;background:#fef3c7;border-radius:6px;margin-top:.4rem;font-size:.76rem;color:#92400e;">🔒 Manager notes visible after check-in meeting</div>';
         }
       } else {
-        // Monthly
         ['refl0','refl1','refl2'].forEach(function(k){if(d[k])h+='<p>'+d[k]+'</p>';});
         if(d.support)h+='<p><strong>🙋 Support:</strong> '+d.support+'</p>';
-
         var canSeeMgr2=canEditManagerSection(currentUser.email,d.employee)||d.released;
-        if(canSeeMgr2){
-          if(d.mgr_working||d.mgr_strengthen){
-            h+='<hr style="margin:.5rem 0;border-color:var(--border);">';
-            h+='<p style="font-size:.75rem;font-weight:700;color:var(--accent);text-transform:uppercase;">Manager Assessment</p>';
-            if(d.mgr_working)h+='<p><strong>✅ Working:</strong> '+d.mgr_working+'</p>';
-            if(d.mgr_strengthen)h+='<p><strong>🔧 Strengthen:</strong> '+d.mgr_strengthen+'</p>';
-          }
-        } else {
-          h+='<div style="padding:.5rem;background:#fef3c7;border-radius:6px;margin-top:.5rem;font-size:.78rem;color:#92400e;">🔒 Manager assessment will be visible after your feedback review meeting.</div>';
+        if(canSeeMgr2&&(d.mgr_working||d.mgr_strengthen)){
+          h+='<hr style="margin:.4rem 0;border-color:var(--border);"><p style="font-size:.72rem;font-weight:700;color:var(--accent);text-transform:uppercase;margin-bottom:.25rem;">Manager Assessment</p>';
+          if(d.mgr_working)h+='<p><strong>Working:</strong> '+d.mgr_working+'</p>';
+          if(d.mgr_strengthen)h+='<p><strong>Strengthen:</strong> '+d.mgr_strengthen+'</p>';
+        } else if(!canSeeMgr2){
+          h+='<div style="padding:.4rem;background:#fef3c7;border-radius:6px;margin-top:.4rem;font-size:.76rem;color:#92400e;">🔒 Manager notes visible after feedback meeting</div>';
         }
-        if(d.additionalComments)h+='<p><strong>Additional:</strong> '+d.additionalComments+'</p>';
       }
 
-      // Release button (managers/admins only, not peer feedback)
       if(!d.released&&d.type!=='peer'&&canEditManagerSection(currentUser.email,d.employee)){
-        h+='<div style="margin-top:.5rem;"><button class="btn btn-sm" style="background:var(--success);" onclick="releaseSubmission(\''+d.employee.replace(/'/g,"\\'")+'\',\''+d.type+'\',\''+(d.week||d.month||'').replace(/'/g,"\\'")+'\')">✅ Release to Employee (Meeting Complete)</button></div>';
+        h+='<div style="margin-top:.4rem;"><button class="btn btn-sm" style="background:var(--success);font-size:.75rem;" onclick="releaseSubmission(\''+d.employee.replace(/'/g,"\\'")+'\',\''+d.type+'\',\''+(d.week||d.month||'').replace(/'/g,"\\'")+'\')">✅ Release to Employee</button></div>';
       }
 
       h+='</div></details>';
+      return h;
+    }
+
+    // Render folders
+    var h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem;">';
+    visible.forEach(function(name){
+      var person = orgChart[name];
+      var role = person ? person.role : '';
+      var allDocs = (byPerson[name]||[]).filter(function(d){
+        if(typeFilter!=='all'&&d.type!==typeFilter) return false;
+        if(d.type==='peer'&&d.delivery==='manager'){
+          if(name===viewerName) return false;
+        }
+        return true;
+      });
+      var weeklies = allDocs.filter(function(d){return d.type==='weekly';});
+      var monthlies = allDocs.filter(function(d){return d.type==='monthly';});
+      var peers = allDocs.filter(function(d){return d.type==='peer';});
+      var totalCount = allDocs.length;
+      var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2);
+      var isSelf = name === viewerName;
+
+      h+='<div class="card" style="padding:0;overflow:hidden;">';
+      // Folder header
+      h+='<div style="background:'+(isSelf?'var(--accent)':'var(--panel)')+';padding:.75rem 1rem;display:flex;align-items:center;gap:.75rem;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">';
+      h+='<div style="width:36px;height:36px;border-radius:50%;background:'+(isSelf?'rgba(255,255,255,.25)':'var(--accent)')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0;">'+initials+'</div>';
+      h+='<div style="flex:1;min-width:0;">';
+      h+='<div style="font-weight:700;font-size:.88rem;color:'+(isSelf?'#fff':'var(--text)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+name+(isSelf?' <span style="font-size:.7rem;opacity:.8;">(you)</span>':'')+'</div>';
+      h+='<div style="font-size:.72rem;color:'+(isSelf?'rgba(255,255,255,.75)':'var(--text-light)')+';">'+role+'</div>';
+      h+='</div>';
+      h+='<div style="display:flex;gap:.35rem;flex-shrink:0;">';
+      if(weeklies.length)h+='<span style="background:'+(isSelf?'rgba(255,255,255,.25)':'#e0f2fe')+';color:'+(isSelf?'#fff':'#0369a1')+';font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:700;">'+weeklies.length+' W</span>';
+      if(monthlies.length)h+='<span style="background:'+(isSelf?'rgba(255,255,255,.25)':'#fef3c7')+';color:'+(isSelf?'#fff':'#92400e')+';font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:700;">'+monthlies.length+' M</span>';
+      if(peers.length)h+='<span style="background:'+(isSelf?'rgba(255,255,255,.25)':'#f3e8ff')+';color:'+(isSelf?'#fff':'#6b21a8')+';font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:700;">'+peers.length+' P</span>';
+      if(!totalCount)h+='<span style="font-size:.65rem;color:'+(isSelf?'rgba(255,255,255,.6)':'var(--text-light)')+';">No docs yet</span>';
+      h+='</div></div>';
+
+      // Folder body (collapsed by default)
+      h+='<div style="padding:.75rem;display:none;">';
+      if(!totalCount){
+        h+='<p style="color:var(--text-light);font-size:.82rem;text-align:center;padding:.5rem;">No submissions yet.</p>';
+      } else {
+        if(weeklies.length){
+          h+='<p style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin-bottom:.35rem;">📅 Weekly 1:1s ('+weeklies.length+')</p>';
+          weeklies.sort(function(a,b){return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date);});
+          weeklies.forEach(function(d){h+=renderSubmissionDoc(d);});
+        }
+        if(monthlies.length){
+          h+='<p style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin:.5rem 0 .35rem;">📊 Monthly Feedback ('+monthlies.length+')</p>';
+          monthlies.sort(function(a,b){return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date);});
+          monthlies.forEach(function(d){h+=renderSubmissionDoc(d);});
+        }
+        if(peers.length){
+          h+='<p style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--text-light);margin:.5rem 0 .35rem;">💬 Peer Feedback ('+peers.length+')</p>';
+          peers.sort(function(a,b){return new Date(b.submittedAt||b.date)-new Date(a.submittedAt||a.date);});
+          peers.forEach(function(d){h+=renderSubmissionDoc(d);});
+        }
+      }
+      h+='</div></div>';
     });
+    h+='</div>';
     container.innerHTML=h;
-  }).catch(function(){document.getElementById('subList').innerHTML='<p style="color:var(--text-light);">Could not load submissions.</p>';});
+  }).catch(function(){document.getElementById('subFolders').innerHTML='<p style="color:var(--text-light);">Could not load submissions.</p>';});
 }
 
 function releaseSubmission(employee,type,period){
