@@ -2,7 +2,7 @@
 // Handles GET (load submissions) and POST (save submission)
 // Storage: Vercel Blob — submissions stored as JSON files at feedback/{type}/{employee}/{period}.json
 
-import { put, list, head, get } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 
 const CORS = {
   'Access-Control-Allow-Origin': 'https://tt-checkins.vercel.app',
