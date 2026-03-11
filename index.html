@@ -1045,7 +1045,7 @@ function renderWeeklyLinks(){
   Object.keys(orgChart).sort().forEach(function(name){
     var p=orgChart[name];if(!p.manager)return;
     if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
-    var url=base+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(roleMap[p.role]||p.role)+'&week='+encodeURIComponent(weekLabel);
+    var url=base+'&employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(roleMap[p.role]||p.role)+'&week='+encodeURIComponent(weekLabel);
     h+='<tr><td><strong>'+name+'</strong></td><td style="color:var(--text-light);">'+p.role+'</td><td style="color:var(--text-light);">'+p.manager+'</td>';
     h+='<td><button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText(\''+url.replace(/'/g,"\\'")+'\');showToast(\'Copied!\')">📋</button> ';
     h+='<a href="'+url+'" target="_blank" style="font-size:.75rem;color:var(--accent);">Open</a></td></tr>';
@@ -1063,7 +1063,7 @@ function renderLinks(){
     var p=orgChart[name];if(!p.manager)return;
     if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
     var t=btoa(name+'-'+month).replace(/=/g,'');
-    var url=base+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(p.role)+'&month='+encodeURIComponent(month)+'&t='+t;
+    var url=base+'&employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(p.role)+'&month='+encodeURIComponent(month)+'&t='+t;
     h+='<tr><td><strong>'+name+'</strong></td><td style="color:var(--text-light);">'+p.role+'</td><td style="color:var(--text-light);">'+p.manager+'</td>';
     h+='<td><button class="btn btn-sm btn-outline" onclick="navigator.clipboard.writeText(\''+url.replace(/'/g,"\\'")+'\');showToast(\'Copied!\')">📋</button> ';
     h+='<a href="'+url+'" target="_blank" style="font-size:.75rem;color:var(--accent);">Open</a></td></tr>';
@@ -1082,7 +1082,7 @@ function copyAllLinks(type){
     Object.keys(orgChart).sort().forEach(function(name){
       var p=orgChart[name];if(!p.manager)return;
       if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
-      var url=base+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(roleMap[p.role]||p.role)+'&week='+encodeURIComponent(weekLabel);
+      var url=base+'&employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(roleMap[p.role]||p.role)+'&week='+encodeURIComponent(weekLabel);
       lines.push(name+' ('+p.role+')\n'+url);
     });
     navigator.clipboard.writeText(lines.join('\n\n'));
@@ -1094,7 +1094,7 @@ function copyAllLinks(type){
       var p=orgChart[name];if(!p.manager)return;
       if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
       var t=btoa(name+'-'+month).replace(/=/g,'');
-      var url=base2+'?employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(p.role)+'&month='+encodeURIComponent(month)+'&t='+t;
+      var url=base2+'&employee='+encodeURIComponent(name)+'&manager='+encodeURIComponent(p.manager)+'&role='+encodeURIComponent(p.role)+'&month='+encodeURIComponent(month)+'&t='+t;
       lines.push(name+' ('+p.role+')\n'+url);
     });
     navigator.clipboard.writeText(lines.join('\n\n'));
