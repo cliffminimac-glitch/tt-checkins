@@ -1,44 +1,62 @@
 // /api/feedback/index.js
 // Handles GET (load submissions) and POST (save submission)
-// Storage: Vercel KV (Redis-based, native to Vercel)
-// Setup: Enable KV in Vercel dashboard > Storage > Create KV Store > connect to this project
+// Storage: Vercel Blob — submissions stored as JSON files at feedback/{type}/{employee}/{period}.json
 
-import { kv } from '@vercel/kv';
+import { put, list, head, get } from '@vercel/blob';
+
+const CORS = {
+  'Access-Control-Allow-Origin': 'https://tt-checkins.vercel.app',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://tt-checkins.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   // ── GET: load submissions ──────────────────────────────────────
   if (req.method === 'GET') {
     try {
       const { type, employee, week, month } = req.query;
 
-      // Fetch all submission IDs from the index
-      const ids = await kv.lrange('feedback:index', 0, -1);
-      if (!ids || ids.length === 0) return res.status(200).json([]);
+      // Build prefix to narrow the blob list
+      let prefix = 'feedback/';
+      if (type && employee) {
+        const safePeriod = week || month;
+        if (safePeriod) {
+          // Direct lookup — fetch single blob
+          const blobPath = blobKey(type, employee, safePeriod);
+          try {
+            const blobRes = await fetch(
+              `https://blob.vercel-storage.com/${blobPath}`,
+              { headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` } }
+            );
+            if (blobRes.ok) {
+              const record = await blobRes.json();
+              return res.status(200).json([record]);
+            }
+          } catch (_) { /* fall through to full scan */ }
+        }
+        prefix = `feedback/${type}/${sanitize(employee)}/`;
+      } else if (type) {
+        prefix = `feedback/${type}/`;
+      }
 
-      // Fetch all records in parallel
+      // List and fetch all matching blobs
+      const { blobs } = await list({ prefix, token: process.env.BLOB_READ_WRITE_TOKEN });
       const records = await Promise.all(
-        ids.map(id => kv.get(`feedback:${id}`))
+        blobs.map(b =>
+          fetch(b.url).then(r => r.ok ? r.json() : null).catch(() => null)
+        )
       );
 
-      // Filter out nulls (deleted/expired entries)
       let results = records.filter(Boolean);
 
-      // Apply optional filters from query params
-      if (type)     results = results.filter(r => r.type === type);
+      // Apply remaining filters
       if (employee) results = results.filter(r => r.employee === employee);
       if (week)     results = results.filter(r => r.week === week);
       if (month)    results = results.filter(r => r.month === month);
-
-      // Sort newest first
-      results.sort((a, b) => new Date(b.date) - new Date(a.date));
+      results.sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
 
       return res.status(200).json(results);
     } catch (err) {
@@ -51,36 +69,40 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
       const data = req.body;
-
-      // Basic validation
       if (!data || !data.type || !data.employee) {
         return res.status(400).json({ error: 'Missing required fields: type, employee' });
       }
 
-      // Generate a unique ID for this submission
-      // For weekly/monthly: use a stable key so re-saves overwrite, not duplicate
-      let id;
-      if (data.type === 'weekly' && data.employee && data.week) {
-        id = `weekly__${sanitize(data.employee)}__${sanitize(data.week)}`;
-      } else if (data.type === 'monthly' && data.employee && data.month) {
-        id = `monthly__${sanitize(data.employee)}__${sanitize(data.month)}`;
-      } else if (data.type === 'peer') {
-        id = `peer__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`;
-      } else {
-        id = `misc__${Date.now()}`;
-      }
+      // Determine period key
+      const period = data.week || data.month || new Date().toISOString().slice(0, 10);
+      const key = blobKey(data.type, data.employee, period);
 
-      // Stamp with server time and save
-      const record = { ...data, id, savedAt: new Date().toISOString(), released: data.released || false };
-      await kv.set(`feedback:${id}`, record);
+      // Try to load existing record to merge (preserves manager fields if employee is saving, vice-versa)
+      let existing = {};
+      try {
+        const existingBlob = await list({ prefix: key, token: process.env.BLOB_READ_WRITE_TOKEN });
+        if (existingBlob.blobs.length > 0) {
+          const existingRes = await fetch(existingBlob.blobs[0].url);
+          if (existingRes.ok) existing = await existingRes.json();
+        }
+      } catch (_) { /* first save, no existing record */ }
 
-      // Add to index only if it's a new entry (weekly/monthly overwrite same slot)
-      const existing = await kv.lpos('feedback:index', id);
-      if (existing === null) {
-        await kv.lpush('feedback:index', id);
-      }
+      const record = {
+        ...existing,
+        ...data,
+        id: key,
+        savedAt: new Date().toISOString(),
+        released: data.released ?? existing.released ?? false,
+      };
 
-      return res.status(200).json({ ok: true, id });
+      await put(key, JSON.stringify(record), {
+        access: 'public',
+        contentType: 'application/json',
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+        allowOverwrite: true,
+      });
+
+      return res.status(200).json({ ok: true, id: key });
     } catch (err) {
       console.error('POST /api/feedback error:', err);
       return res.status(500).json({ error: 'Failed to save submission' });
@@ -90,6 +112,15 @@ export default async function handler(req, res) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
+// ── Helpers ────────────────────────────────────────────────────────
 function sanitize(str) {
-  return String(str).replace(/[^a-zA-Z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
+  return String(str)
+    .toLowerCase()
+    .replace(/[^a-z0-9\-_ ]/g, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 80);
+}
+
+function blobKey(type, employee, period) {
+  return `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}.json`;
 }

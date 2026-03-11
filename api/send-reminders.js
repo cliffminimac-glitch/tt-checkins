@@ -6,7 +6,10 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// RESEND_API_KEY must be set in Vercel Environment Variables
+// Get a free key at resend.com (3,000 emails/month free)
+// Also set: RESEND_FROM_EMAIL = "Tiger Tracks Check-Ins <checkins@tigertracks.ai>"
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // ── Team roster (mirrors orgChart in index.html) ──────────────────
 const EMAIL_MAP = {
@@ -89,6 +92,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { type, period } = req.body;
+
+  if (!resend) {
+    return res.status(503).json({
+      error: 'Email not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL to Vercel Environment Variables. Get a free key at resend.com.',
+    });
+  }
 
   if (!type || !period) {
     return res.status(400).json({ error: 'Missing fields: type, period' });

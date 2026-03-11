@@ -1,40 +1,44 @@
 // /api/feedback/release.js
-// Marks a manager's notes as "released" — visible to the employee
+// Marks a submission as "released" so the employee can see manager notes
 // Body: { employee, type, period }
 
-import { kv } from '@vercel/kv';
+import { put, list } from '@vercel/blob';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://tt-checkins.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
     const { employee, type, period } = req.body;
-
     if (!employee || !type || !period) {
       return res.status(400).json({ error: 'Missing fields: employee, type, period' });
     }
 
-    // Build the stable key (matches the format used in /api/feedback)
-    const sanitize = str => String(str).replace(/[^a-zA-Z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
-    const id = `${type}__${sanitize(employee)}__${sanitize(period)}`;
-    const key = `feedback:${id}`;
+    const sanitize = str => String(str).toLowerCase().replace(/[^a-z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
+    const key = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}.json`;
 
-    const record = await kv.get(key);
-    if (!record) {
-      return res.status(404).json({ error: 'Submission not found', id });
-    }
+    // Fetch existing record
+    const { blobs } = await list({ prefix: key, token: process.env.BLOB_READ_WRITE_TOKEN });
+    if (!blobs.length) return res.status(404).json({ error: 'Submission not found' });
 
-    // Flip released flag
-    await kv.set(key, { ...record, released: true, releasedAt: new Date().toISOString() });
+    const existingRes = await fetch(blobs[0].url);
+    if (!existingRes.ok) return res.status(500).json({ error: 'Could not fetch existing record' });
+    const record = await existingRes.json();
+
+    // Update released flag
+    await put(key, JSON.stringify({ ...record, released: true, releasedAt: new Date().toISOString() }), {
+      access: 'public',
+      contentType: 'application/json',
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+      allowOverwrite: true,
+    });
 
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('POST /api/feedback/release error:', err);
-    return res.status(500).json({ error: 'Failed to release submission' });
+    return res.status(500).json({ error: err.message });
   }
 }
