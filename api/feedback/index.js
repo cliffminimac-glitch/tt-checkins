@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         })
       );
 
-      let results = records.filter(Boolean);
+      let results = records.filter(r => r && !r._delete);
 
       // Sort: released records first, then newest savedAt
       results.sort((a, b) => {
