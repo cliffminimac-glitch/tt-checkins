@@ -497,6 +497,8 @@ function enterApp(){
   document.getElementById('mainContent').style.display='';
   document.getElementById('navUserEmail').textContent=currentUser.email;
   applyAccessControl();
+  // Apply meeting link params after UI is ready
+  setTimeout(applyMeetingLinkParams, 300);
 }
 
 function signOut(){
@@ -517,36 +519,50 @@ function signOut(){
   }
 })();
 
-// ── Auto-navigate from direct meeting links ───────────────────────
+// ── Meeting link auto-navigate ────────────────────────────────────
+// Step 1: Save params to sessionStorage on page load so they survive
+// Google's sign-in popup and any internal redirects
 (function(){
   var params=new URLSearchParams(window.location.search);
   var section=params.get('section');
   var employee=params.get('employee');
-  var manager=params.get('manager');
-  var role=params.get('role');
-  var week=params.get('week');
-  var month=params.get('month');
   if(!section||!employee)return;
-  function applyParams(){
-    if(section==='weekly'){
-      showSection('sec-weekly');
-      var empEl=document.getElementById('wkName');
-      if(empEl){empEl.value=employee;if(typeof wkNameChanged==='function')wkNameChanged();}
-      if(week){var wkEl=document.getElementById('wkDate');if(wkEl)wkEl.value=week;}
-      if(manager){var mgEl=document.getElementById('wkManager');if(mgEl)mgEl.value=manager;}
-      if(role){var rlEl=document.getElementById('wkRole');if(rlEl)rlEl.value=role;}
-      if(typeof loadWeeklyData==='function')loadWeeklyData();
-    } else if(section==='monthly'){
-      showSection('sec-monthly');
-      var empEl2=document.getElementById('moName');
-      if(empEl2){empEl2.value=employee;if(typeof moNameChanged==='function')moNameChanged();}
-      if(month){var moEl=document.getElementById('moMonth');if(moEl)moEl.value=month;}
-      if(manager){var mgEl2=document.getElementById('moManager');if(mgEl2)mgEl2.value=manager;}
-      if(role){var rlEl2=document.getElementById('moRole');if(rlEl2)rlEl2.value=role;}
-    }
-  }
-  setTimeout(applyParams,400);
+  sessionStorage.setItem('tt_meeting_params',JSON.stringify({
+    section:section,
+    employee:employee,
+    manager:params.get('manager')||'',
+    role:params.get('role')||'',
+    week:params.get('week')||'',
+    month:params.get('month')||''
+  }));
 })();
+
+// Step 2: Apply params — called from enterApp() after UI is fully rendered
+function applyMeetingLinkParams(){
+  var stored=sessionStorage.getItem('tt_meeting_params');
+  if(!stored)return;
+  var p;
+  try{p=JSON.parse(stored);}catch(e){return;}
+  sessionStorage.removeItem('tt_meeting_params');
+  var section=p.section,employee=p.employee,manager=p.manager,role=p.role,week=p.week,month=p.month;
+  if(!section||!employee)return;
+  if(section==='weekly'){
+    showSection('sec-weekly');
+    var empEl=document.getElementById('wkName');
+    if(empEl){empEl.value=employee;if(typeof wkNameChanged==='function')wkNameChanged();}
+    if(week){var wkEl=document.getElementById('wkDate');if(wkEl)wkEl.value=week;}
+    if(manager){var mgEl=document.getElementById('wkManager');if(mgEl)mgEl.value=manager;}
+    if(role){var rlEl=document.getElementById('wkRole');if(rlEl)rlEl.value=role;}
+    if(typeof loadWeeklyData==='function')setTimeout(loadWeeklyData,100);
+  } else if(section==='monthly'){
+    showSection('sec-monthly');
+    var empEl2=document.getElementById('moName');
+    if(empEl2){empEl2.value=employee;if(typeof moNameChanged==='function')moNameChanged();}
+    if(month){var moEl=document.getElementById('moMonth');if(moEl)moEl.value=month;}
+    if(manager){var mgEl2=document.getElementById('moManager');if(mgEl2)mgEl2.value=manager;}
+    if(role){var rlEl2=document.getElementById('moRole');if(rlEl2)rlEl2.value=role;}
+  }
+}
 
 // ===== ORG CHART =====
 var orgChart = {
