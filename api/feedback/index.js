@@ -1,6 +1,7 @@
 // /api/feedback/index.js
 // Handles GET (load submissions) and POST (save submission)
-// Storage: Vercel Blob — submissions stored as JSON files at feedback/{type}/{employee}/{period}.json
+// Storage: Vercel Blob — submissions stored as JSON files at feedback/{type}/{employee}/{period}__{ts}.json
+// Each write goes to a UNIQUE timestamped key to avoid CDN stale-content issues on overwrite.
 
 import { put, list } from '@vercel/blob';
 
@@ -17,56 +18,38 @@ export default async function handler(req, res) {
   // ── GET: load submissions ──────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      const { type, employee, week, month } = req.query;
+      const { type, employee } = req.query;
 
       // Build prefix to narrow the blob list
       let prefix = 'feedback/';
       if (type && employee) {
-        const safePeriod = week || month;
-        if (safePeriod) {
-          // Direct lookup — fetch single blob
-          const blobPath = blobKey(type, employee, safePeriod);
-          try {
-            const blobRes = await fetch(
-              `https://blob.vercel-storage.com/${blobPath}`,
-              { headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` } }
-            );
-            if (blobRes.ok) {
-              const record = await blobRes.json();
-              return res.status(200).json([record]);
-            }
-          } catch (_) { /* fall through to full scan */ }
-        }
-        prefix = `feedback/${type}/${sanitize(employee)}/`;
+        prefix = `feedback/${sanitize(type)}/${sanitize(employee)}/`;
       } else if (type) {
-        prefix = `feedback/${type}/`;
+        prefix = `feedback/${sanitize(type)}/`;
       }
 
-      // List and fetch all matching blobs
+      // List all matching blobs (may include multiple versions per record)
       const { blobs } = await list({ prefix, token: process.env.BLOB_READ_WRITE_TOKEN });
-      const token = process.env.BLOB_READ_WRITE_TOKEN;
+
       const records = await Promise.all(
         blobs.map(b => {
-          // Use downloadUrl to bypass CDN caching; fall back to url with cache-bust
-          const fetchUrl = b.downloadUrl
-            ? b.downloadUrl
-            : b.url + (b.url.includes('?') ? '&' : '?') + '_nc=' + Date.now();
-          const headers = b.downloadUrl ? { Authorization: `Bearer ${token}` } : {};
+          // downloadUrl bypasses CDN caching (always fresh)
+          const fetchUrl = b.downloadUrl || b.url;
+          const headers = b.downloadUrl ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` } : {};
           return fetch(fetchUrl, { headers }).then(r => r.ok ? r.json() : null).catch(() => null);
         })
       );
 
       let results = records.filter(Boolean);
 
-      // Apply remaining filters
-      if (employee) results = results.filter(r => r.employee === employee);
-      if (week)     results = results.filter(r => r.week === week);
-      if (month)    results = results.filter(r => r.month === month);
+      // Sort: released records first, then newest savedAt
+      results.sort((a, b) => {
+        const aTime = new Date(a.releasedAt || a.savedAt || a.date || 0);
+        const bTime = new Date(b.releasedAt || b.savedAt || b.date || 0);
+        return bTime - aTime;
+      });
 
-      // Sort newest first
-      results.sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
-
-      // Deduplicate: keep only the most recent record per (type + employee + period)
+      // Deduplicate: keep only the most recent/released record per (type + employee + period)
       const seen = new Set();
       results = results.filter(r => {
         const period = r.week || r.month || '';
@@ -93,39 +76,46 @@ export default async function handler(req, res) {
 
       // Determine period key
       const period = data.week || data.month || new Date().toISOString().slice(0, 10);
-      const key = blobKey(data.type, data.employee, period);
+      const baseKey = `feedback/${sanitize(data.type)}/${sanitize(data.employee)}/${sanitize(period)}`;
 
-      // Try to load existing record to merge (preserves manager fields if employee is saving, vice-versa)
+      // Read latest version of this record to merge (preserves manager/employee fields)
       let existing = {};
       try {
-        const existingBlob = await list({ prefix: key, token: process.env.BLOB_READ_WRITE_TOKEN });
-        if (existingBlob.blobs.length > 0) {
-          const eb = existingBlob.blobs[0];
-          const existUrl = eb.downloadUrl
-            ? eb.downloadUrl
-            : eb.url + (eb.url.includes('?') ? '&' : '?') + '_nc=' + Date.now();
-          const existHeaders = eb.downloadUrl ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` } : {};
-          const existingRes = await fetch(existUrl, { headers: existHeaders });
+        const existingBlobs = await list({ prefix: baseKey, token: process.env.BLOB_READ_WRITE_TOKEN });
+        if (existingBlobs.blobs.length > 0) {
+          // Sort by upload time to get the latest version
+          const latest = existingBlobs.blobs.sort((a, b) =>
+            new Date(b.uploadedAt) - new Date(a.uploadedAt)
+          )[0];
+          const fetchUrl = latest.downloadUrl || latest.url;
+          const headers = latest.downloadUrl ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` } : {};
+          const existingRes = await fetch(fetchUrl, { headers });
           if (existingRes.ok) existing = await existingRes.json();
         }
       } catch (_) { /* first save, no existing record */ }
 
+      // Always write to a NEW timestamped key to avoid CDN staleness
+      const ts = Date.now();
+      const key = `${baseKey}__${ts}.json`;
+
       const record = {
         ...existing,
         ...data,
-        id: key,
+        id: baseKey + '.json', // logical id (period-based, not timestamp-based)
         savedAt: new Date().toISOString(),
         released: data.released ?? existing.released ?? false,
+        releasedAt: data.releasedAt ?? existing.releasedAt ?? undefined,
       };
+      // Clean up undefined fields
+      if (!record.releasedAt) delete record.releasedAt;
 
       await put(key, JSON.stringify(record), {
         access: 'public',
         contentType: 'application/json',
         token: process.env.BLOB_READ_WRITE_TOKEN,
-        allowOverwrite: true,
       });
 
-      return res.status(200).json({ ok: true, id: key });
+      return res.status(200).json({ ok: true, id: baseKey + '.json' });
     } catch (err) {
       console.error('POST /api/feedback error:', err);
       return res.status(500).json({ error: 'Failed to save submission' });
@@ -142,8 +132,4 @@ function sanitize(str) {
     .replace(/[^a-z0-9\-_ ]/g, '')
     .replace(/\s+/g, '_')
     .slice(0, 80);
-}
-
-function blobKey(type, employee, period) {
-  return `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}.json`;
 }

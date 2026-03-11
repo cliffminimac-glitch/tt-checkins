@@ -1,6 +1,7 @@
 // /api/feedback/release.js
 // Marks a submission as "released" so the employee can see manager notes
 // Body: { employee, type, period }
+// Writes to a NEW timestamped key to avoid CDN stale-content issues.
 
 import { put, list } from '@vercel/blob';
 
@@ -20,47 +21,46 @@ export default async function handler(req, res) {
     const sanitize = str =>
       String(str).toLowerCase().replace(/[^a-z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
 
-    const key = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}.json`;
     const token = process.env.BLOB_READ_WRITE_TOKEN;
-
+    const baseKey = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}`;
     const dirPrefix = `feedback/${sanitize(type)}/${sanitize(employee)}/`;
-    const { blobs } = await list({ prefix: dirPrefix, token });
 
-    const target = blobs.find(b => b.pathname === key || (b.pathname && b.pathname.endsWith(`/${sanitize(period)}.json`)));
-    if (!target) {
-      return res.status(404).json({ error: 'Submission not found', key, found: blobs.map(b => b.pathname) });
+    // List all blobs for this employee/type and find the most recent for this period
+    const { blobs } = await list({ prefix: dirPrefix, token });
+    const periodBlobs = blobs.filter(b => b.pathname && b.pathname.startsWith(baseKey));
+
+    if (!periodBlobs.length) {
+      return res.status(404).json({ error: 'Submission not found', baseKey });
     }
 
-    // Use downloadUrl (bypasses CDN caching) if available, fall back to url with cache-bust
-    const fetchUrl = target.downloadUrl || (target.url + (target.url.includes('?') ? '&' : '?') + '_nc=' + Date.now());
-    const existingRes = await fetch(fetchUrl, {
-      headers: target.downloadUrl ? { Authorization: `Bearer ${token}` } : {},
-    });
+    // Get the latest version
+    const latest = periodBlobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+
+    // Fetch current content using downloadUrl (bypasses CDN) or url
+    const fetchUrl = latest.downloadUrl || latest.url;
+    const fetchHeaders = latest.downloadUrl ? { Authorization: `Bearer ${token}` } : {};
+    const existingRes = await fetch(fetchUrl, { headers: fetchHeaders });
 
     let record = {};
     if (existingRes.ok) {
       record = await existingRes.json();
     }
 
-    const newRecord = { ...record, released: true, releasedAt: new Date().toISOString() };
-    const putResult = await put(key, JSON.stringify(newRecord), {
+    // Write to a NEW timestamped key — avoids CDN caching entirely
+    const ts = Date.now();
+    const newKey = `${baseKey}__${ts}.json`;
+
+    await put(newKey, JSON.stringify({
+      ...record,
+      released: true,
+      releasedAt: new Date().toISOString(),
+    }), {
       access: 'public',
       contentType: 'application/json',
       token,
-      allowOverwrite: true,
     });
 
-    return res.status(200).json({
-      ok: true,
-      _debug: {
-        key,
-        targetPathname: target.pathname,
-        targetUrl: target.url.slice(0, 60),
-        hasDownloadUrl: !!target.downloadUrl,
-        recordPreRelease: { released: record.released, savedAt: record.savedAt },
-        putUrl: putResult?.url?.slice(0, 60),
-      }
-    });
+    return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('POST /api/feedback/release error:', err);
     return res.status(500).json({ error: err.message });
