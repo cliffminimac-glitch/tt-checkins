@@ -125,13 +125,18 @@ export default async function handler(req, res) {
     }
 
     try {
-      await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'Tiger Tracks Check-Ins <checkins@tigertracks.ai>',
+      const { data, error: sendError } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'Tiger Tracks Check-Ins <onboarding@resend.dev>',
         to: email,
         subject,
         html: bodyHtml,
       });
-      results.push({ name, email, sent: true });
+      if (sendError) {
+        console.error(`Resend error for ${email}:`, sendError);
+        results.push({ name, email, sent: false, error: sendError.message });
+      } else {
+        results.push({ name, email, sent: true, id: data?.id });
+      }
     } catch (err) {
       console.error(`Failed to send to ${email}:`, err);
       results.push({ name, email, sent: false, error: err.message });
