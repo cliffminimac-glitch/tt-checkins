@@ -1199,7 +1199,8 @@ function loadSubmissions(){
     if(!data.length){container.innerHTML='<p style="color:var(--text-light);text-align:center;">No submissions yet.</p>';return;}
 
     var typeFilter=document.getElementById('subFilter').value;
-    var empFilter=document.getElementById('subEmployee').value;
+    var subEmpEl=document.getElementById('subEmployee');
+    var empFilter=subEmpEl?subEmpEl.value:'';
     var filtered=data.filter(function(d){
       if(typeFilter!=='all'&&d.type!==typeFilter)return false;
       if(empFilter&&d.employee!==empFilter)return false;
