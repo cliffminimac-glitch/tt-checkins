@@ -44,10 +44,15 @@ export default async function handler(req, res) {
 
       // List and fetch all matching blobs
       const { blobs } = await list({ prefix, token: process.env.BLOB_READ_WRITE_TOKEN });
+      const token = process.env.BLOB_READ_WRITE_TOKEN;
       const records = await Promise.all(
         blobs.map(b => {
-          const bustUrl = b.url + (b.url.includes('?') ? '&' : '?') + '_=' + Date.now();
-          return fetch(bustUrl).then(r => r.ok ? r.json() : null).catch(() => null);
+          // Use downloadUrl to bypass CDN caching; fall back to url with cache-bust
+          const fetchUrl = b.downloadUrl
+            ? b.downloadUrl
+            : b.url + (b.url.includes('?') ? '&' : '?') + '_nc=' + Date.now();
+          const headers = b.downloadUrl ? { Authorization: `Bearer ${token}` } : {};
+          return fetch(fetchUrl, { headers }).then(r => r.ok ? r.json() : null).catch(() => null);
         })
       );
 
@@ -95,8 +100,12 @@ export default async function handler(req, res) {
       try {
         const existingBlob = await list({ prefix: key, token: process.env.BLOB_READ_WRITE_TOKEN });
         if (existingBlob.blobs.length > 0) {
-          const existUrl = existingBlob.blobs[0].url + (existingBlob.blobs[0].url.includes('?') ? '&' : '?') + '_=' + Date.now();
-          const existingRes = await fetch(existUrl);
+          const eb = existingBlob.blobs[0];
+          const existUrl = eb.downloadUrl
+            ? eb.downloadUrl
+            : eb.url + (eb.url.includes('?') ? '&' : '?') + '_nc=' + Date.now();
+          const existHeaders = eb.downloadUrl ? { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` } : {};
+          const existingRes = await fetch(existUrl, { headers: existHeaders });
           if (existingRes.ok) existing = await existingRes.json();
         }
       } catch (_) { /* first save, no existing record */ }

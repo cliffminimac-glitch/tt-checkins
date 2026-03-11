@@ -20,30 +20,32 @@ export default async function handler(req, res) {
     const sanitize = str =>
       String(str).toLowerCase().replace(/[^a-z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
 
-    const sanitizedPeriod = sanitize(period);
-    const key = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitizedPeriod}.json`;
+    const key = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}.json`;
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
 
-    // Use a directory-level prefix so the listing doesn't miss exact-name matches
     const dirPrefix = `feedback/${sanitize(type)}/${sanitize(employee)}/`;
-    const { blobs } = await list({ prefix: dirPrefix, token: process.env.BLOB_READ_WRITE_TOKEN });
+    const { blobs } = await list({ prefix: dirPrefix, token });
 
-    // Find the exact file
-    const target = blobs.find(b => b.pathname === key || (b.url && b.url.endsWith(key)));
+    const target = blobs.find(b => b.pathname === key || (b.pathname && b.pathname.endsWith(`/${sanitize(period)}.json`)));
     if (!target) {
-      return res.status(404).json({ error: 'Submission not found', key, found: blobs.map(b => b.pathname || b.url) });
+      return res.status(404).json({ error: 'Submission not found', key, found: blobs.map(b => b.pathname) });
     }
 
-    // Fetch current content (cache-busted to avoid CDN staleness)
-    const bustUrl = target.url + (target.url.includes('?') ? '&' : '?') + '_=' + Date.now();
-    const existingRes = await fetch(bustUrl);
-    if (!existingRes.ok) return res.status(500).json({ error: 'Could not fetch existing record' });
-    const record = await existingRes.json();
+    // Use downloadUrl (bypasses CDN caching) if available, fall back to url with cache-bust
+    const fetchUrl = target.downloadUrl || (target.url + (target.url.includes('?') ? '&' : '?') + '_nc=' + Date.now());
+    const existingRes = await fetch(fetchUrl, {
+      headers: target.downloadUrl ? { Authorization: `Bearer ${token}` } : {},
+    });
 
-    // Overwrite with released flag
+    let record = {};
+    if (existingRes.ok) {
+      record = await existingRes.json();
+    }
+
     await put(key, JSON.stringify({ ...record, released: true, releasedAt: new Date().toISOString() }), {
       access: 'public',
       contentType: 'application/json',
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token,
       allowOverwrite: true,
     });
 
