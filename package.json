@@ -1,0 +1,10 @@
+{
+  "name": "tt-checkins-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vercel/kv": "^2.0.0",
+    "resend": "^3.0.0"
+  }
+}

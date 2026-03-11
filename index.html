@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tiger Tracks - Team Check-Ins</title>
+<link rel="icon" type="image/png" href="/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
@@ -516,6 +517,37 @@ function signOut(){
   }
 })();
 
+// ── Auto-navigate from direct meeting links ───────────────────────
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var section=params.get('section');
+  var employee=params.get('employee');
+  var manager=params.get('manager');
+  var role=params.get('role');
+  var week=params.get('week');
+  var month=params.get('month');
+  if(!section||!employee)return;
+  function applyParams(){
+    if(section==='weekly'){
+      showSection('sec-weekly');
+      var empEl=document.getElementById('wkName');
+      if(empEl){empEl.value=employee;if(typeof wkNameChanged==='function')wkNameChanged();}
+      if(week){var wkEl=document.getElementById('wkDate');if(wkEl)wkEl.value=week;}
+      if(manager){var mgEl=document.getElementById('wkManager');if(mgEl)mgEl.value=manager;}
+      if(role){var rlEl=document.getElementById('wkRole');if(rlEl)rlEl.value=role;}
+      if(typeof loadWeeklyData==='function')loadWeeklyData();
+    } else if(section==='monthly'){
+      showSection('sec-monthly');
+      var empEl2=document.getElementById('moName');
+      if(empEl2){empEl2.value=employee;if(typeof moNameChanged==='function')moNameChanged();}
+      if(month){var moEl=document.getElementById('moMonth');if(moEl)moEl.value=month;}
+      if(manager){var mgEl2=document.getElementById('moManager');if(mgEl2)mgEl2.value=manager;}
+      if(role){var rlEl2=document.getElementById('moRole');if(rlEl2)rlEl2.value=role;}
+    }
+  }
+  setTimeout(applyParams,400);
+})();
+
 // ===== ORG CHART =====
 var orgChart = {
   "Riley Abercrombie":{manager:"Rachel Scharett",role:"Associate Director",reports:["Shelby Nations","Owen Phipps"],practice:"am"},
@@ -991,7 +1023,7 @@ function switchLinkTab(tab,el){
 function renderWeeklyLinks(){
   var dateEl=document.getElementById('linkWeekDate');
   var weekLabel=dateEl.value?new Date(dateEl.value+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'This Week';
-  var base=window.location.origin+'/weekly-form.html';
+  var base=window.location.origin+'/?section=weekly';
   var viewerEmail=localStorage.getItem('tt_google_email')||'';
   var h='<table><tr><th>Employee</th><th>Role</th><th>Manager</th><th>Actions</th></tr>';
   Object.keys(orgChart).sort().forEach(function(name){
@@ -1008,7 +1040,7 @@ function renderWeeklyLinks(){
 
 function renderLinks(){
   var month=document.getElementById('linkMonth').value;
-  var base=window.location.origin+'/feedback-form.html';
+  var base=window.location.origin+'/?section=monthly';
   var viewerEmail=localStorage.getItem('tt_google_email')||'';
   var h='<table><tr><th>Employee</th><th>Role</th><th>Manager</th><th>Actions</th></tr>';
   Object.keys(orgChart).sort().forEach(function(name){
@@ -1030,7 +1062,7 @@ function copyAllLinks(type){
   if(type==='weekly'){
     var dateEl=document.getElementById('linkWeekDate');
     var weekLabel=dateEl.value?new Date(dateEl.value+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'This Week';
-    var base=window.location.origin+'/weekly-form.html';
+    var base=window.location.origin+'/?section=weekly';
     Object.keys(orgChart).sort().forEach(function(name){
       var p=orgChart[name];if(!p.manager)return;
       if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
@@ -1041,7 +1073,7 @@ function copyAllLinks(type){
     var el=document.getElementById('wkLinkCopyOk');el.style.display='inline';setTimeout(function(){el.style.display='none';},1500);
   } else {
     var month=document.getElementById('linkMonth').value;
-    var base2=window.location.origin+'/feedback-form.html';
+    var base2=window.location.origin+'/?section=monthly';
     Object.keys(orgChart).sort().forEach(function(name){
       var p=orgChart[name];if(!p.manager)return;
       if(viewerEmail&&!canViewEmployee(viewerEmail,name))return;
