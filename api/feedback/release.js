@@ -33,8 +33,9 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Submission not found', key, found: blobs.map(b => b.pathname || b.url) });
     }
 
-    // Fetch current content
-    const existingRes = await fetch(target.url);
+    // Fetch current content (cache-busted to avoid CDN staleness)
+    const bustUrl = target.url + (target.url.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const existingRes = await fetch(bustUrl);
     if (!existingRes.ok) return res.status(500).json({ error: 'Could not fetch existing record' });
     const record = await existingRes.json();
 

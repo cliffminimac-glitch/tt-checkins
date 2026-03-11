@@ -45,9 +45,10 @@ export default async function handler(req, res) {
       // List and fetch all matching blobs
       const { blobs } = await list({ prefix, token: process.env.BLOB_READ_WRITE_TOKEN });
       const records = await Promise.all(
-        blobs.map(b =>
-          fetch(b.url).then(r => r.ok ? r.json() : null).catch(() => null)
-        )
+        blobs.map(b => {
+          const bustUrl = b.url + (b.url.includes('?') ? '&' : '?') + '_=' + Date.now();
+          return fetch(bustUrl).then(r => r.ok ? r.json() : null).catch(() => null);
+        })
       );
 
       let results = records.filter(Boolean);
@@ -94,7 +95,8 @@ export default async function handler(req, res) {
       try {
         const existingBlob = await list({ prefix: key, token: process.env.BLOB_READ_WRITE_TOKEN });
         if (existingBlob.blobs.length > 0) {
-          const existingRes = await fetch(existingBlob.blobs[0].url);
+          const existUrl = existingBlob.blobs[0].url + (existingBlob.blobs[0].url.includes('?') ? '&' : '?') + '_=' + Date.now();
+          const existingRes = await fetch(existUrl);
           if (existingRes.ok) existing = await existingRes.json();
         }
       } catch (_) { /* first save, no existing record */ }
