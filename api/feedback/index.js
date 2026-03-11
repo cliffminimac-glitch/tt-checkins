@@ -56,7 +56,19 @@ export default async function handler(req, res) {
       if (employee) results = results.filter(r => r.employee === employee);
       if (week)     results = results.filter(r => r.week === week);
       if (month)    results = results.filter(r => r.month === month);
+
+      // Sort newest first
       results.sort((a, b) => new Date(b.savedAt || b.date) - new Date(a.savedAt || a.date));
+
+      // Deduplicate: keep only the most recent record per (type + employee + period)
+      const seen = new Set();
+      results = results.filter(r => {
+        const period = r.week || r.month || '';
+        const key = `${r.type}|${r.employee}|${period}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
       return res.status(200).json(results);
     } catch (err) {
