@@ -42,14 +42,25 @@ export default async function handler(req, res) {
       record = await existingRes.json();
     }
 
-    await put(key, JSON.stringify({ ...record, released: true, releasedAt: new Date().toISOString() }), {
+    const newRecord = { ...record, released: true, releasedAt: new Date().toISOString() };
+    const putResult = await put(key, JSON.stringify(newRecord), {
       access: 'public',
       contentType: 'application/json',
       token,
       allowOverwrite: true,
     });
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({
+      ok: true,
+      _debug: {
+        key,
+        targetPathname: target.pathname,
+        targetUrl: target.url.slice(0, 60),
+        hasDownloadUrl: !!target.downloadUrl,
+        recordPreRelease: { released: record.released, savedAt: record.savedAt },
+        putUrl: putResult?.url?.slice(0, 60),
+      }
+    });
   } catch (err) {
     console.error('POST /api/feedback/release error:', err);
     return res.status(500).json({ error: err.message });
