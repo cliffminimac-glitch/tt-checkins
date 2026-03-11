@@ -5,7 +5,7 @@
 import { put, list } from '@vercel/blob';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://tt-checkins.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -17,18 +17,28 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing fields: employee, type, period' });
     }
 
-    const sanitize = str => String(str).toLowerCase().replace(/[^a-z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
-    const key = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitize(period)}.json`;
+    const sanitize = str =>
+      String(str).toLowerCase().replace(/[^a-z0-9\-_ ]/g, '').replace(/\s+/g, '_').slice(0, 80);
 
-    // Fetch existing record
-    const { blobs } = await list({ prefix: key, token: process.env.BLOB_READ_WRITE_TOKEN });
-    if (!blobs.length) return res.status(404).json({ error: 'Submission not found' });
+    const sanitizedPeriod = sanitize(period);
+    const key = `feedback/${sanitize(type)}/${sanitize(employee)}/${sanitizedPeriod}.json`;
 
-    const existingRes = await fetch(blobs[0].url);
+    // Use a directory-level prefix so the listing doesn't miss exact-name matches
+    const dirPrefix = `feedback/${sanitize(type)}/${sanitize(employee)}/`;
+    const { blobs } = await list({ prefix: dirPrefix, token: process.env.BLOB_READ_WRITE_TOKEN });
+
+    // Find the exact file
+    const target = blobs.find(b => b.pathname === key || (b.url && b.url.endsWith(key)));
+    if (!target) {
+      return res.status(404).json({ error: 'Submission not found', key, found: blobs.map(b => b.pathname || b.url) });
+    }
+
+    // Fetch current content
+    const existingRes = await fetch(target.url);
     if (!existingRes.ok) return res.status(500).json({ error: 'Could not fetch existing record' });
     const record = await existingRes.json();
 
-    // Update released flag
+    // Overwrite with released flag
     await put(key, JSON.stringify({ ...record, released: true, releasedAt: new Date().toISOString() }), {
       access: 'public',
       contentType: 'application/json',
